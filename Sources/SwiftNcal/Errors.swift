@@ -1,0 +1,17 @@
+import Foundation
+
+enum SodiumError: Error, Equatable {
+    case badSignatureError(String)
+    case cryptoError(String)
+    case invalidSeedLength(String)
+    case runtimeError(String)
+    case typeError(String)
+    case unavailableError(String)
+    case valueError(String)
+}
+
+func ensure(_ condition: Bool, raising error: SodiumError) throws {
+    if !condition {
+        throw error
+    }
+}

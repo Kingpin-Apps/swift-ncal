@@ -1,0 +1,15 @@
+{
+  "originHash" : "bf863713042f2925626b5fd839fbb2fd18b657992c8c08d25212ab622a28ba7b",
+  "pins" : [
+    {
+      "identity" : "base32",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/norio-nomura/Base32.git",
+      "state" : {
+        "revision" : "c4bc0a49689999ae2c7c778f3830a6a6e694efb8",
+        "version" : "0.9.0"
+      }
+    }
+  ],
+  "version" : 3
+}
