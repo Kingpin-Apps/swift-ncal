@@ -20,7 +20,14 @@ public struct SwiftNcal {
     public let cryptoAead = CryptoAead()
     public let cryptoBox = CryptoBox()
     public let cryptoCore = CryptoCore()
+    public let cryptoGenericHash = CryptoGenericHash()
+    public let cryptoHash = CryptoHash()
+    public let cryptoKx = CryptoKx()
+    public let cryptoPwHash = CryptoPwHash()
     public let cryptoScalarmult = CryptoScalarmult()
+    public let cryptoSecretBox = CryptoSecretBox()
+    public let cryptoSecretStream = CryptoSecretStream()
+    public let cryptoShortHash = CryptoShortHash()
     public let cryptoSign = CryptoSign()
     public let randomBytes = RandomBytes()
     public let utils = Utils()
@@ -48,6 +55,5 @@ extension SwiftNcal {
         guard sodium_init() >= 0 else {
             fatalError("Failed to initialize libsodium")
         }
-        print("Global initialization of the package")
     }()
 }

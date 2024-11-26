@@ -12,12 +12,11 @@ public struct CryptoBox {
     public let sealBytes = Int(crypto_box_sealbytes())
     public let macBytes = Int(crypto_box_macbytes())
 
+    /// Returns a randomly generated public and secret key.
+    ///
+    /// - Returns: A tuple containing the public key and secret key.
+    /// - Throws: Raises a `SodiumError` if keypair generation fails.
     public func keypair() throws -> (publicKey: Data, secretKey: Data) {
-        /// Returns a randomly generated public and secret key.
-        ///
-        /// - Returns: A tuple containing the public key and secret key.
-        /// - Throws: Raises a `SodiumError` if keypair generation fails.
-
         var pk = Data(count: publicKeyBytes)
         var sk = Data(count: secretKeyBytes)
 
@@ -26,7 +25,7 @@ public struct CryptoBox {
                 guard let pkRawPtr = pkPtr.baseAddress,
                     let skRawPtr = skPtr.baseAddress
                 else {
-                    return Int32(-1)  // Return an appropriate error code in case of failure
+                    return Int32(-1)
                 }
                 return crypto_box_keypair(
                     pkRawPtr.assumingMemoryBound(to: UInt8.self),
@@ -39,16 +38,15 @@ public struct CryptoBox {
         return (Data(pk.prefix(Int(publicKeyBytes))), Data(sk.prefix(Int(secretKeyBytes))))
     }
 
+    /// Returns a (public, secret) key pair deterministically generated from an input ``seed``.
+    /// - Warning: The seed **must** be high-entropy; therefore, its generator **must** be a cryptographic quality random function like, for example, :func:`utils.random`.
+    /// - Warning: The seed **must** be protected and remain secret. Anyone who knows the seed is really in possession of the corresponding PrivateKey.
+    /// - Parameters:
+    ///     - seed: `Data`
+    ///
+    /// - Returns: A tuple containing the public key and secret key.
+    /// - Throws: Raises a `SodiumError` if keypair generation fails.
     public func seedKeypair(seed: Data) throws -> (publicKey: Data, secretKey: Data) {
-        /// Returns a (public, secret) key pair deterministically generated from an input ``seed``.
-        /// - Warning: The seed **must** be high-entropy; therefore, its generator **must** be a cryptographic quality random function like, for example, :func:`utils.random`.
-        /// - Warning: The seed **must** be protected and remain secret. Anyone who knows the seed is really in possession of the corresponding PrivateKey.
-        /// - Parameters:
-        ///     - seed: `Data`
-        ///
-        /// - Returns: A tuple containing the public key and secret key.
-        /// - Throws: Raises a `SodiumError` if keypair generation fails.
-
         try ensure(
             seed.count == seedBytes,
             raising: .valueError("Invalid seed")
@@ -64,7 +62,7 @@ public struct CryptoBox {
                         let skRawPtr = skPtr.baseAddress,
                         let seedRawPtr = seedPtr.baseAddress
                     else {
-                        return Int32(-1)  // Return an appropriate error code in case of failure
+                        return Int32(-1)
                     }
                     return crypto_box_seed_keypair(
                         pkRawPtr.assumingMemoryBound(to: UInt8.self),
@@ -79,20 +77,19 @@ public struct CryptoBox {
         return (Data(pk.prefix(Int(publicKeyBytes))), Data(sk.prefix(Int(secretKeyBytes))))
     }
 
+    /// Encrypts and returns a message ``message`` using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
+    ///
+    /// - Parameters:
+    ///    - message: `Data`
+    ///    - nonce: `Data`
+    ///    - publicKey: `Data`
+    ///    - secretKey: `Data`
+    ///
+    /// - Returns: The encrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func box(message: Data, nonce: Data, publicKey: Data, secretKey: Data) throws
         -> Data
     {
-        /// Encrypts and returns a message ``message`` using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
-        ///
-        /// - Parameters:
-        ///    - message: `Data`
-        ///    - nonce: `Data`
-        ///    - publicKey: `Data`
-        ///    - secretKey: `Data`
-        ///
-        /// - Returns: The encrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce size")
@@ -143,19 +140,18 @@ public struct CryptoBox {
         return ciphertext.dropFirst(boxZeroBytes)
     }
 
+    /// Decrypts and returns an encrypted message ``ciphertext``, using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
+    ///
+    /// - Parameters:
+    ///    - ciphertext: `Data`
+    ///    - nonce: `Data`
+    ///    - publicKey: `Data`
+    ///    - secretKey: `Data`
+    ///
+    /// - Returns: The decrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func open(ciphertext: Data, nonce: Data, publicKey: Data, secretKey: Data) throws -> Data
     {
-        /// Decrypts and returns an encrypted message ``ciphertext``, using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
-        ///
-        /// - Parameters:
-        ///    - ciphertext: `Data`
-        ///    - nonce: `Data`
-        ///    - publicKey: `Data`
-        ///    - secretKey: `Data`
-        ///
-        /// - Returns: The decrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce size")
@@ -212,16 +208,15 @@ public struct CryptoBox {
         return plaintext.dropFirst(zeroBytes)
     }
 
+    /// Computes and returns the shared key for the public key ``pk`` and the secret key ``sk``. This can be used to speed up operations where the same set of keys is going to be used multiple times.
+    ///
+    /// - Parameters:
+    ///    - publicKey: `Data`
+    ///    - secretKey: `Data`
+    ///
+    /// - Returns: The shared key.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func beforenm(publicKey: Data, secretKey: Data) throws -> Data {
-        /// Computes and returns the shared key for the public key ``pk`` and the secret key ``sk``. This can be used to speed up operations where the same set of keys is going to be used multiple times.
-        ///
-        /// - Parameters:
-        ///    - publicKey: `Data`
-        ///    - secretKey: `Data`
-        ///
-        /// - Returns: The shared key.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-
         try ensure(
             publicKey.count == publicKeyBytes,
             raising: .valueError("Invalid public key")
@@ -257,17 +252,16 @@ public struct CryptoBox {
         return Data(sharedKey.prefix(beforeNmBytes))
     }
 
+    /// Encrypts and returns the message ``message`` using the shared key ``k`` and the nonce ``nonce``.
+    ///
+    /// - Parameters:
+    ///    - message: `Data`
+    ///    - nonce: `Data`
+    ///    - sharedKey: `Data`
+    ///
+    /// - Returns: An encrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func afternm(message: Data, nonce: Data, sharedKey: Data) throws -> Data {
-        /// Encrypts and returns the message ``message`` using the shared key ``k`` and the nonce ``nonce``.
-        ///
-        /// - Parameters:
-        ///    - message: `Data`
-        ///    - nonce: `Data`
-        ///    - sharedKey: `Data`
-        ///
-        /// - Returns: An encrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-        
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce")
@@ -308,18 +302,17 @@ public struct CryptoBox {
         return ciphertext.dropFirst(boxZeroBytes)
     }
 
+    /// Decrypts and returns the encrypted message ``ciphertext``, using the shared key ``k`` and the nonce ``nonce``.
+    ///
+    /// - Parameters:
+    ///   - ciphertext: `Data`
+    ///   - nonce: `Data`
+    ///   - sharedKey: `Data`
+    ///
+    /// - Returns: A tuple containing the public key and secret key.
+    /// - Throws: Raises a `SodiumError` if keypair generation fails.
     public func openAfternm(ciphertext: Data, nonce: Data, sharedKey: Data) throws -> Data
     {
-        /// Decrypts and returns the encrypted message ``ciphertext``, using the shared key ``k`` and the nonce ``nonce``.
-        ///
-        /// - Parameters:
-        ///   - ciphertext: `Data`
-        ///   - nonce: `Data`
-        ///   - sharedKey: `Data`
-        ///
-        /// - Returns: A tuple containing the public key and secret key.
-        /// - Throws: Raises a `SodiumError` if keypair generation fails.
-        
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce")
@@ -363,18 +356,17 @@ public struct CryptoBox {
         return plaintext.dropFirst(zeroBytes)
     }
     
+    /// Encrypts and returns a message ``message`` using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
+    ///
+    /// - Parameters:
+    ///   - message: `Data`
+    ///   - nonce: `Data`
+    ///   - publicKey: `Data`
+    ///   - secretKey
+    ///
+    /// - Returns: The encrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func easy(message: Data, nonce: Data, publicKey: Data, secretKey: Data) throws -> Data {
-        /// Encrypts and returns a message ``message`` using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
-        ///
-        /// - Parameters:
-        ///   - message: `Data`
-        ///   - nonce: `Data`
-        ///   - publicKey: `Data`
-        ///   - secretKey
-        ///
-        /// - Returns: The encrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-        
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce")
@@ -427,18 +419,17 @@ public struct CryptoBox {
         return ciphertext
     }
     
+    /// Decrypts and returns an encrypted message ``ciphertext``, using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
+    ///
+    /// - Parameters:
+    ///     - ciphertext: `Data`
+    ///     - nonce: `Data`
+    ///     - publicKey: `Data`
+    ///     - secretKey: `Data`
+    ///
+    /// - Returns: The decrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func openEasy(ciphertext: Data, nonce: Data, publicKey: Data, secretKey: Data) throws -> Data {
-        /// Decrypts and returns an encrypted message ``ciphertext``, using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
-        ///
-        /// - Parameters:
-        ///     - ciphertext: `Data`
-        ///     - nonce: `Data`
-        ///     - publicKey: `Data`
-        ///     - secretKey: `Data`
-        ///
-        /// - Returns: The decrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-        
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce size")
@@ -498,17 +489,16 @@ public struct CryptoBox {
         return plaintext
     }
     
+    /// Encrypts and returns the message ``message`` using the shared key ``k`` and the nonce ``nonce``.
+    ///
+    /// - Parameters:
+    ///    - message: `Data`
+    ///    - nonce: `Data`
+    ///    - sharedKey: `Data`
+    ///
+    /// - Returns: The encrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func easyAfternm(message: Data, nonce: Data, sharedKey: Data) throws -> Data {
-        /// Encrypts and returns the message ``message`` using the shared key ``k`` and the nonce ``nonce``.
-        ///
-        /// - Parameters:
-        ///    - message: `Data`
-        ///    - nonce: `Data`
-        ///    - sharedKey: `Data`
-        ///
-        /// - Returns: The encrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-        
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce")
@@ -551,17 +541,16 @@ public struct CryptoBox {
         return ciphertext
     }
     
+    /// Decrypts and returns the encrypted message ``ciphertext``, using the shared key ``k`` and the nonce ``nonce``.
+    ///
+    /// - Parameters:
+    ///  - ciphertext: `Data`
+    ///  - nonce: `Data`
+    ///  - sharedKey: `Data`
+    ///
+    /// - Returns: The decrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func openEasyAfternm(ciphertext: Data, nonce: Data, sharedKey: Data) throws -> Data {
-        /// Decrypts and returns the encrypted message ``ciphertext``, using the shared key ``k`` and the nonce ``nonce``.
-        ///
-        /// - Parameters:
-        ///  - ciphertext: `Data`
-        ///  - nonce: `Data`
-        ///  - sharedKey: `Data`
-        ///
-        /// - Returns: The decrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-        
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce")
@@ -609,17 +598,16 @@ public struct CryptoBox {
         return plaintext
     }
 
+    /// Encrypts and returns a message ``message`` using an ephemeral secret key and the public key ``pk``.
+    /// The ephemeral public key, which is embedded in the sealed box, is also used, in combination with ``pk``, to derive the nonce needed for the underlying box construct.
+    ///
+    /// - Parameters:
+    ///   - message: `Data`
+    ///   - publicKey: `Data`
+    ///
+    /// - Returns: The encrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func seal(message: Data, publicKey: Data) throws -> Data {
-        /// Encrypts and returns a message ``message`` using an ephemeral secret key and the public key ``pk``.
-        /// The ephemeral public key, which is embedded in the sealed box, is also used, in combination with ``pk``, to derive the nonce needed for the underlying box construct.
-        ///
-        /// - Parameters:
-        ///   - message: `Data`
-        ///   - publicKey: `Data`
-        ///
-        /// - Returns: The encrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-
         try ensure(
             publicKey.count == publicKeyBytes,
             raising: .valueError("Invalid public key")
@@ -653,18 +641,17 @@ public struct CryptoBox {
         return ciphertext
     }
 
+    /// Decrypts and returns an encrypted message ``ciphertext``, using the recipent's secret key ``sk`` and the sender's ephemeral public key embedded in the sealed box. The box construct nonce is derived from the recipient's public key ``pk`` and the sender's public key.
+    ///
+    /// - Parameters:
+    ///  - ciphertext: `Data`
+    ///  - publicKey: `Data`
+    ///  - secretKey: `Data`
+    ///
+    /// - Returns: The decrypted message.
+    /// - Throws: Raises a `SodiumError` if input is invalid.
     public func sealOpen(ciphertext: Data, publicKey: Data, secretKey: Data) throws -> Data
     {
-        /// Decrypts and returns an encrypted message ``ciphertext``, using the recipent's secret key ``sk`` and the sender's ephemeral public key embedded in the sealed box. The box construct nonce is derived from the recipient's public key ``pk`` and the sender's public key.
-        ///
-        /// - Parameters:
-        ///  - ciphertext: `Data`
-        ///  - publicKey: `Data`
-        ///  - secretKey: `Data`
-        ///
-        /// - Returns: The decrypted message.
-        /// - Throws: Raises a `SodiumError` if input is invalid.
-        
         try ensure(
             publicKey.count == publicKeyBytes,
             raising: .valueError("Invalid public key")

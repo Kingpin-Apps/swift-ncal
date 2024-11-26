@@ -33,7 +33,8 @@ let package = Package(
             targets: ["SwiftNcal"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/norio-nomura/Base32.git", from: "0.9.0")
+        .package(url: "https://github.com/norio-nomura/Base32.git", from: "0.9.0"),
+        .package(url: "https://github.com/attaswift/BigInt.git", from: "5.4.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -41,7 +42,7 @@ let package = Package(
         clibsodiumTarget,
         .target(
             name: "SwiftNcal",
-            dependencies: ["Clibsodium", "Base32"],
+            dependencies: ["Clibsodium", "Base32", "BigInt"],
             exclude: ["libsodium", "Info.plist"]
         ),
         .testTarget(
