@@ -45,7 +45,6 @@ public struct Argon2id {
         } catch SodiumError.invalidKeyError {
             return false
         }
-        return try sodium.cryptoPwHash.strVerify(passwd_hash: passwordHash, passwd: password)
     }
 
     /**
