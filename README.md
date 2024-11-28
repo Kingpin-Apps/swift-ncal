@@ -1,3 +1,5 @@
+![GitHub Workflow Status](https://github.com/Kingpin-Apps/swift-ncal/actions/workflows/swift.yml/badge.svg)
+
 # Swift-NaCL - Swift binding to the libsodium library
 
 Swift-NaCL is a Swift binding to a fork of [libsodium](https://github.com/IntersectMBO/libsodium) library. These libraries have a stated goal of
