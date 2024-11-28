@@ -4,10 +4,10 @@ import XCTest
 @testable import SwiftNcal
 
 class CryptoShortHashTests: XCTestCase {
-    let swiftNcal = SwiftNcal()
+    let sodium = Sodium()
 
     func testSiphash24() throws {
-        let cryptoShortHash = swiftNcal.cryptoShortHash
+        let cryptoShortHash = sodium.cryptoShortHash
         
         let message = "Hello, World!".data(using: .utf8)!
         let key = Data(repeating: 0, count: cryptoShortHash.keyBytes)
@@ -18,7 +18,7 @@ class CryptoShortHashTests: XCTestCase {
     }
 
     func testSiphash24WithInvalidKey() throws {
-        let cryptoShortHash = swiftNcal.cryptoShortHash
+        let cryptoShortHash = sodium.cryptoShortHash
         
         let message = "Hello, World!".data(using: .utf8)!
         let key = Data(repeating: 0, count: cryptoShortHash.keyBytes - 1) // Invalid key length
@@ -27,7 +27,7 @@ class CryptoShortHashTests: XCTestCase {
     }
 
     func testSiphashx24() throws {
-        let cryptoShortHash = swiftNcal.cryptoShortHash
+        let cryptoShortHash = sodium.cryptoShortHash
         
         let message = "Hello, World!".data(using: .utf8)!
         let key = Data(repeating: 0, count: cryptoShortHash.xKeyBytes)
@@ -38,7 +38,7 @@ class CryptoShortHashTests: XCTestCase {
     }
 
     func testSiphashx24WithInvalidKey() throws {
-        let cryptoShortHash = swiftNcal.cryptoShortHash
+        let cryptoShortHash = sodium.cryptoShortHash
         
         let message = "Hello, World!".data(using: .utf8)!
         let key = Data(repeating: 0, count: cryptoShortHash.xKeyBytes - 1) // Invalid key length

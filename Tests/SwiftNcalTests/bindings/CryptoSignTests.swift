@@ -2,7 +2,7 @@ import XCTest
 @testable import SwiftNcal
 
 class CryptoSignTests: XCTestCase {
-    let cryptoSign = SwiftNcal().cryptoSign
+    let cryptoSign = Sodium().cryptoSign
     
     // Test keypair generation
     func testCryptoSignKeypair() throws {

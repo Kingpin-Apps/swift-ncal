@@ -4,7 +4,7 @@ import XCTest
 @testable import SwiftNcal
 
 class CryptoKxTests: XCTestCase {
-    let cryptoKx = SwiftNcal().cryptoKx
+    let cryptoKx = Sodium().cryptoKx
 
     func testKeypair() throws {
         let (publicKey, secretKey) = try cryptoKx.keypair()

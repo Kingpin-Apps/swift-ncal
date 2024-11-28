@@ -38,7 +38,6 @@ public struct CryptoSecretBox {
                             guard let nonceRawPtr = noncePtr.baseAddress,
                                   let ciphertextRawPtr = ciphertextPtr.baseAddress,
                                   let paddedRawPtr = paddedPtr.baseAddress,
-                                  let nonceRawPtr = noncePtr.baseAddress,
                                   let keyRawPtr = keyPtr.baseAddress else {
                                 return Int32(-1)
                             }
@@ -78,7 +77,7 @@ public struct CryptoSecretBox {
             raising: .valueError("Invalid nonce")
         )
         
-        var padded = Data(repeating: 0, count: boxZeroBytes) + ciphertext
+        let padded = Data(repeating: 0, count: boxZeroBytes) + ciphertext
         var plaintext = Data(count: padded.count)
 
         let res = nonce.withUnsafeBytes { noncePtr in

@@ -174,9 +174,12 @@ public struct CryptoSign {
             publicKeyBytes.withUnsafeBytes { (publicKeyBytesPtr: UnsafeRawBufferPointer) in
                 guard let curvePublicKeyRawPtr = curvePublicKeyPtr.baseAddress,
                       let publicKeyBytesRawPtr = publicKeyBytesPtr.baseAddress else {
-                    return Int32(-1) // Return an appropriate error code in case of failure
+                    return Int32(-1)
                 }
-                return crypto_sign_ed25519_pk_to_curve25519(curvePublicKeyRawPtr, publicKeyBytesRawPtr)
+                return crypto_sign_ed25519_pk_to_curve25519(
+                    curvePublicKeyRawPtr.assumingMemoryBound(to: UInt8.self),
+                    publicKeyBytesRawPtr.assumingMemoryBound(to: UInt8.self)
+                )
             }
         }
         try ensure(rc == 0, raising: .runtimeError("Unexpected library error"))

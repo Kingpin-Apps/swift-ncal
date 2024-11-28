@@ -15,8 +15,9 @@ let sodiumSizeMax: UInt64 = {
     return min(UINT64_MAX, SIZE_MAX)
 }()
 
-public struct SwiftNcal {
+public struct Sodium {
 
+    /// Bindings to the libsodium library
     public let cryptoAead = CryptoAead()
     public let cryptoBox = CryptoBox()
     public let cryptoCore = CryptoCore()
@@ -30,27 +31,15 @@ public struct SwiftNcal {
     public let cryptoShortHash = CryptoShortHash()
     public let cryptoSign = CryptoSign()
     public let randomBytes = RandomBytes()
-    public let utils = Utils()
+    public let utils = CryptoUtils()
     public let version = Version()
-    
-    //    public let secretBox = SecretBox()
-    //    public let genericHash = GenericHash()
-    //    public let pwHash = PWHash()
-    //    public let shortHash = ShortHash()
-    //    public let sign = Sign()
-    //    public let keyExchange = KeyExchange()
-    //    public let auth = Auth()
-    //    public let stream = Stream()
-    //    public let keyDerivation = KeyDerivation()
-    //    public let secretStream = SecretStream()
-    //    public let aead = Aead()
 
     public init() {
-        _ = SwiftNcal.once
+        _ = Sodium.once
     }
 }
 
-extension SwiftNcal {
+extension Sodium {
     private static let once: Void = {
         guard sodium_init() >= 0 else {
             fatalError("Failed to initialize libsodium")

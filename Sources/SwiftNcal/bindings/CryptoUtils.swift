@@ -1,7 +1,7 @@
 import Foundation
 import Clibsodium
 
-public struct Utils {
+public struct CryptoUtils {
     public func sodiumMemcmp(_ inp1: Data, _ inp2: Data) -> Bool {
         /// Compare contents of two memory regions in constant time
         ///

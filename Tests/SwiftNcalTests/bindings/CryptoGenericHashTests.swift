@@ -3,9 +3,9 @@ import XCTest
 @testable import SwiftNcal
 
 class CryptoGenericHashTests: XCTestCase {
-    let swiftNcal = SwiftNcal()
+    let sodium = Sodium()
     func testBlake2bSaltPersonal() throws {
-        let cryptoGenericHash = swiftNcal.cryptoGenericHash
+        let cryptoGenericHash = sodium.cryptoGenericHash
 
         let message = "Hello, World!".data(using: .utf8)!
         let salt = "somesalt".data(using: .utf8)!
@@ -19,7 +19,7 @@ class CryptoGenericHashTests: XCTestCase {
     }
 
     func testBlake2bInit() throws {
-        let cryptoGenericHash = swiftNcal.cryptoGenericHash
+        let cryptoGenericHash = sodium.cryptoGenericHash
 
         let key = "supersecretkey".data(using: .utf8)!
         let salt = "somesalt".data(using: .utf8)!
@@ -33,7 +33,7 @@ class CryptoGenericHashTests: XCTestCase {
     }
 
     func testBlake2bUpdate() throws {
-        let cryptoGenericHash = swiftNcal.cryptoGenericHash
+        let cryptoGenericHash = sodium.cryptoGenericHash
 
         let key = "supersecretkey".data(using: .utf8)!
         let salt = "somesalt".data(using: .utf8)!
@@ -53,7 +53,7 @@ class CryptoGenericHashTests: XCTestCase {
     }
 
     func testBlake2bFinal() throws {
-        let cryptoGenericHash = swiftNcal.cryptoGenericHash
+        let cryptoGenericHash = sodium.cryptoGenericHash
 
         let key = "supersecretkey".data(using: .utf8)!
         let salt = "somesalt".data(using: .utf8)!

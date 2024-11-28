@@ -4,7 +4,7 @@ import XCTest
 @testable import SwiftNcal
 
 final class CryptoHashTests: XCTestCase {
-    let cryptoHash = SwiftNcal().cryptoHash
+    let cryptoHash = Sodium().cryptoHash
 
     func testHash() throws {
         let message = "Hello, World!".data(using: .utf8)!

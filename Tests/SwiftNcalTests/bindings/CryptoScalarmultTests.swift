@@ -3,7 +3,7 @@ import XCTest
 
 final class CryptoScalarmultTests: XCTestCase {
     
-    let cryptoScalarmult = SwiftNcal().cryptoScalarmult
+    let cryptoScalarmult = Sodium().cryptoScalarmult
     
     func testCryptoScalarmultBase() throws {
         let scalar = Data(repeating: 0x01, count: Int(cryptoScalarmult.scalarBytes))

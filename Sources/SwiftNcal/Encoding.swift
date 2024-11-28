@@ -45,7 +45,7 @@ class Base16Encoder: Encoder {
 
 class Base32Encoder: Encoder {
     static func encode(data: Data) -> Data {
-        return data.base32EncodedString.data(using: .utf8)!
+        return data.base32EncodedData
     }
 
     static func decode(data: Data) -> Data {

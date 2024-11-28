@@ -4,7 +4,7 @@ import XCTest
 @testable import SwiftNcal
 
 final class CryptoAEADTests: XCTestCase {
-    let cryptoAead = SwiftNcal().cryptoAead
+    let cryptoAead = Sodium().cryptoAead
 
     func testCryptoAeadChacha20poly1305Ietf() throws {
         let key = Data(repeating: 0x01, count: cryptoAead.chacha20poly1305IetfKeyBytes)

@@ -38,7 +38,7 @@ public struct RandomBytes {
     }
 
     
-    public func bufDeterministic(size: Int, seed: [UInt8]) throws -> Data {
+    public func bufDeterministic(size: Int, seed: Data) throws -> Data {
         /**
          Returns a deterministic stream of unbiased bits derived from a seed.
 
@@ -50,7 +50,12 @@ public struct RandomBytes {
         try ensure(seed.count == crypto_core_ed25519_bytes(), raising: .invalidSeedLength("Seed must be \(crypto_core_ed25519_bytes()) bytes long"))
 
         var buffer = [UInt8](repeating: 0, count: size)
-        randombytes_buf_deterministic(&buffer, size, seed)
+        seed.withUnsafeBytes { (seedPtr: UnsafeRawBufferPointer) in
+            guard let seedRawPtr = seedPtr.baseAddress else {
+                return
+            }
+            randombytes_buf_deterministic(&buffer, size, seedRawPtr.assumingMemoryBound(to: UInt8.self))
+        }
         return Data(buffer)
     }
 }

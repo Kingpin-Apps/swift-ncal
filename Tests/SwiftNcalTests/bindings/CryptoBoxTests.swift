@@ -4,11 +4,66 @@ import XCTest
 @testable import SwiftNcal
 
 class CryptoBoxTests: XCTestCase {
-    let swiftNcal = SwiftNcal()
+    let sodium = Sodium()
+    let message = "The quick brown fox jumps over the lazy dog".data(using: .utf8)!
+    
+    func testBox() throws {
+        let keyPair = try! sodium.cryptoBox.keypair()
+        let nonce = Data(repeating: 0, count: sodium.cryptoBox.nonceBytes)
+        
+        let ciphertext = try sodium.cryptoBox.box(message: message, nonce: nonce, publicKey: keyPair.publicKey, secretKey: keyPair.secretKey)
+        XCTAssertNotNil(ciphertext, "Box encryption failed")
+    }
+
+    func testOpen() throws {
+        let keyPair = try! sodium.cryptoBox.keypair()
+        let nonce = Data(repeating: 0, count: sodium.cryptoBox.nonceBytes)
+        
+        let ciphertext = try sodium.cryptoBox.box(message: message, nonce: nonce, publicKey: keyPair.publicKey, secretKey: keyPair.secretKey)
+        let decryptedMessage = try sodium.cryptoBox.open(
+            ciphertext: ciphertext, nonce: nonce, publicKey: keyPair.publicKey,
+            secretKey: keyPair.secretKey)
+        XCTAssertEqual(decryptedMessage, message, "Box decryption failed")
+    }
+
+    func testAfternm() throws {
+        let keyPair = try! sodium.cryptoBox.keypair()
+        let nonce = Data(repeating: 0, count: sodium.cryptoBox.nonceBytes)
+        
+        let sharedKey = try sodium.cryptoBox.beforenm(
+            publicKey: keyPair.publicKey, secretKey: keyPair.secretKey)
+        let ciphertext = try sodium.cryptoBox.afternm(
+            message: message, nonce: nonce, sharedKey: sharedKey)
+        XCTAssertNotNil(ciphertext, "Afternm encryption failed")
+    }
+
+    func testOpenAfternm() throws {
+        let keyPair = try! sodium.cryptoBox.keypair()
+        let nonce = Data(repeating: 0, count: sodium.cryptoBox.nonceBytes)
+        
+        let sharedKey = try sodium.cryptoBox.beforenm(
+            publicKey: keyPair.publicKey, secretKey: keyPair.secretKey)
+        let ciphertext = try sodium.cryptoBox.afternm(
+            message: message, nonce: nonce, sharedKey: sharedKey)
+        let decryptedMessage = try sodium.cryptoBox.openAfternm(
+            ciphertext: ciphertext, nonce: nonce, sharedKey: sharedKey)
+        XCTAssertEqual(decryptedMessage, message, "Afternm decryption failed")
+    }
+
+    func testBoxWithInvalidPublicKey() {
+        let keyPair = try! sodium.cryptoBox.keypair()
+        let nonce = Data(repeating: 0, count: sodium.cryptoBox.nonceBytes)
+        
+        let invalidPublicKey = Data(repeating: 0, count: sodium.cryptoBox.publicKeyBytes - 1)
+        XCTAssertThrowsError(
+            try sodium.cryptoBox.box(
+                message: message, nonce: nonce, publicKey: invalidPublicKey,
+                secretKey: keyPair.secretKey), "Expected error for invalid public key")
+    }
 
     // Test keypair generation
     func testKeypair() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
         let keypair = try cryptoBox.keypair()
         XCTAssertEqual(
             keypair.publicKey.count, cryptoBox.publicKeyBytes, "Public key length mismatch")
@@ -18,7 +73,7 @@ class CryptoBoxTests: XCTestCase {
 
     // Test seed-based keypair generation
     func testSeedKeypair() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
         let seed = Data(repeating: 0x01, count: cryptoBox.seedBytes)
         let keypair = try cryptoBox.seedKeypair(seed: seed)
         XCTAssertEqual(
@@ -27,8 +82,8 @@ class CryptoBoxTests: XCTestCase {
             keypair.secretKey.count, cryptoBox.secretKeyBytes, "Secret key length mismatch")
     }
 
-    func testBox() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+    func testCryptoBox() throws {
+        let cryptoBox = sodium.cryptoBox
 
         // Generate keypairs
         let A_keypair = try cryptoBox.keypair()
@@ -78,7 +133,7 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxEasy() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate keypairs
         let A_keypair = try cryptoBox.keypair()
@@ -128,7 +183,7 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxWrongLengths() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate keypair
         let A_keypair = try cryptoBox.keypair()
@@ -221,7 +276,7 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxEasyWrongLengths() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate keypair
         let A_keypair = try cryptoBox.keypair()
@@ -314,7 +369,7 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxSealEmpty() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate keypair
         let keypair = try cryptoBox.keypair()
@@ -332,7 +387,7 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxSealEmptyIsVerified() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate keypair
         let keypair = try cryptoBox.keypair()
@@ -355,7 +410,7 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxSealWrongLengths() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate keypair
         let keypair = try cryptoBox.keypair()
@@ -400,7 +455,7 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxSealWrongTypes() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate keypair
         let keypair = try cryptoBox.keypair()
@@ -433,16 +488,16 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxSeedKeypairRandom() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate a random seed
-        let seed = swiftNcal.randomBytes.randomBytes(size: cryptoBox.seedBytes)
+        let seed = sodium.randomBytes.randomBytes(size: cryptoBox.seedBytes)
 
         // Generate keypair from seed
         let keypair = try cryptoBox.seedKeypair(seed: seed)
 
         // Compute public key from secret key
-        let computedPublicKey = try swiftNcal.cryptoScalarmult.base(
+        let computedPublicKey = try sodium.cryptoScalarmult.base(
             n: keypair.secretKey
         )
 
@@ -451,10 +506,10 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxSeedKeypairShortSeed() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Generate a short seed
-        let shortSeed = swiftNcal.randomBytes.randomBytes(
+        let shortSeed = sodium.randomBytes.randomBytes(
             size: cryptoBox.seedBytes - 1
         )
 
@@ -465,7 +520,7 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testBoxSeedKeypairReference() throws {
-        let cryptoBox = swiftNcal.cryptoBox
+        let cryptoBox = sodium.cryptoBox
 
         // Read test vectors
         let vectors = readCryptoTestVectors(fileName: "box_from_seed", delimiter: "\t")
@@ -481,13 +536,13 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testCryptoBoxOpenEasy() throws {
-        let cryptoBox = swiftNcal.cryptoBox
-        
+        let cryptoBox = sodium.cryptoBox
+
         // Generate keypair
         let keypair = try cryptoBox.keypair()
         let publicKey = keypair.publicKey
         let secretKey = keypair.secretKey
-        
+
         let message = "Hello, World!".data(using: .utf8)!
         let nonce = Data(count: cryptoBox.nonceBytes)
 
@@ -499,11 +554,11 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testCryptoBoxSeal() throws {
-        let cryptoBox = swiftNcal.cryptoBox
-        
+        let cryptoBox = sodium.cryptoBox
+
         // Generate keypair
         let keypair = try cryptoBox.keypair()
-        
+
         let message = "Hello, World!".data(using: .utf8)!
         let publicKey = keypair.publicKey
 
@@ -512,13 +567,13 @@ class CryptoBoxTests: XCTestCase {
     }
 
     func testCryptoBoxSealOpen() throws {
-        let cryptoBox = swiftNcal.cryptoBox
-        
+        let cryptoBox = sodium.cryptoBox
+
         // Generate keypair
         let keypair = try cryptoBox.keypair()
         let publicKey = keypair.publicKey
         let secretKey = keypair.secretKey
-        
+
         let message = "Hello, World!".data(using: .utf8)!
 
         let ciphertext = try cryptoBox.seal(message: message, publicKey: publicKey)

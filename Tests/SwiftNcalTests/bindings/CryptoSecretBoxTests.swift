@@ -4,7 +4,7 @@ import XCTest
 @testable import SwiftNcal
 
 class CryptoSecretBoxTests: XCTestCase {
-    let cryptoSecretBox = SwiftNcal().cryptoSecretBox
+    let cryptoSecretBox = Sodium().cryptoSecretBox
     
     func testBox() throws {
         let message = "Hello, World!".data(using: .utf8)!

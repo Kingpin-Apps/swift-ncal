@@ -4,7 +4,7 @@ import XCTest
 @testable import SwiftNcal
 
 class CryptoSecretStreamTests: XCTestCase {
-    let cryptoSecretStream = SwiftNcal().cryptoSecretStream
+    let cryptoSecretStream = Sodium().cryptoSecretStream
 
     func testKeygen() {
         let key = cryptoSecretStream.xchacha20poly1305Keygen()

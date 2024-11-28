@@ -271,18 +271,19 @@ public struct CryptoBox {
             sharedKey.count == beforeNmBytes,
             raising: .valueError("Invalid shared key")
         )
-        
+
         let paddedMessage = Data(repeating: 0, count: zeroBytes) + message
         var ciphertext = Data(count: paddedMessage.count)
-        
+
         let rc = ciphertext.withUnsafeMutableBytes { ciphertextPtr in
             paddedMessage.withUnsafeBytes { paddedMessagePtr in
                 nonce.withUnsafeBytes { noncePtr in
                     sharedKey.withUnsafeBytes { sharedKeyPtr in
                         guard let ciphertextRawPtr = ciphertextPtr.baseAddress,
-                              let paddedMessageRawPtr = paddedMessagePtr.baseAddress,
-                              let nonceRawPtr = noncePtr.baseAddress,
-                              let sharedKeyRawPtr = sharedKeyPtr.baseAddress else {
+                            let paddedMessageRawPtr = paddedMessagePtr.baseAddress,
+                            let nonceRawPtr = noncePtr.baseAddress,
+                            let sharedKeyRawPtr = sharedKeyPtr.baseAddress
+                        else {
                             return Int32(-1)
                         }
                         return crypto_box_afternm(
@@ -296,9 +297,9 @@ public struct CryptoBox {
                 }
             }
         }
-        
+
         try ensure(rc == 0, raising: SodiumError.runtimeError("Unexpected library error"))
-        
+
         return ciphertext.dropFirst(boxZeroBytes)
     }
 
@@ -311,8 +312,7 @@ public struct CryptoBox {
     ///
     /// - Returns: A tuple containing the public key and secret key.
     /// - Throws: Raises a `SodiumError` if keypair generation fails.
-    public func openAfternm(ciphertext: Data, nonce: Data, sharedKey: Data) throws -> Data
-    {
+    public func openAfternm(ciphertext: Data, nonce: Data, sharedKey: Data) throws -> Data {
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce")
@@ -321,12 +321,13 @@ public struct CryptoBox {
             sharedKey.count == beforeNmBytes,
             raising: .valueError("Invalid shared key")
         )
-        
-        let paddedCiphertext = Data(
-            repeating: 0,
-            count: boxZeroBytes
-        ) + ciphertext
-        
+
+        let paddedCiphertext =
+            Data(
+                repeating: 0,
+                count: boxZeroBytes
+            ) + ciphertext
+
         var plaintext = Data(count: paddedCiphertext.count)
 
         let res = plaintext.withUnsafeMutableBytes { plaintextPtr in
@@ -334,10 +335,11 @@ public struct CryptoBox {
                 nonce.withUnsafeBytes { noncePtr in
                     sharedKey.withUnsafeBytes { sharedKeyPtr in
                         guard let plaintextRawPtr = plaintextPtr.baseAddress,
-                              let paddedCiphertextRawPtr = paddedCiphertextPtr.baseAddress,
-                              let nonceRawPtr = noncePtr.baseAddress,
-                              let sharedKeyRawPtr = sharedKeyPtr.baseAddress else {
-                            return Int32(-1) // Return an appropriate error code in case of failure
+                            let paddedCiphertextRawPtr = paddedCiphertextPtr.baseAddress,
+                            let nonceRawPtr = noncePtr.baseAddress,
+                            let sharedKeyRawPtr = sharedKeyPtr.baseAddress
+                        else {
+                            return Int32(-1)  // Return an appropriate error code in case of failure
                         }
                         return crypto_box_open_afternm(
                             plaintextRawPtr.assumingMemoryBound(to: UInt8.self),
@@ -351,11 +353,13 @@ public struct CryptoBox {
             }
         }
 
-        try ensure(res == 0, raising: SodiumError.runtimeError("An error occurred trying to decrypt the message"))
+        try ensure(
+            res == 0,
+            raising: SodiumError.runtimeError("An error occurred trying to decrypt the message"))
 
         return plaintext.dropFirst(zeroBytes)
     }
-    
+
     /// Encrypts and returns a message ``message`` using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
     ///
     /// - Parameters:
@@ -394,10 +398,11 @@ public struct CryptoBox {
                     publicKey.withUnsafeBytes { publicKeyPtr in
                         secretKey.withUnsafeBytes { secretKeyPtr in
                             guard let ciphertextRawPtr = ciphertextPtr.baseAddress,
-                                  let messageRawPtr = messagePtr.baseAddress,
-                                  let nonceRawPtr = noncePtr.baseAddress,
-                                  let publicKeyRawPtr = publicKeyPtr.baseAddress,
-                                  let secretKeyRawPtr = secretKeyPtr.baseAddress else {
+                                let messageRawPtr = messagePtr.baseAddress,
+                                let nonceRawPtr = noncePtr.baseAddress,
+                                let publicKeyRawPtr = publicKeyPtr.baseAddress,
+                                let secretKeyRawPtr = secretKeyPtr.baseAddress
+                            else {
                                 return Int32(-1)
                             }
                             return crypto_box_easy(
@@ -413,12 +418,12 @@ public struct CryptoBox {
                 }
             }
         }
-        
+
         try ensure(rc == 0, raising: .runtimeError("Unexpected library error"))
 
         return ciphertext
     }
-    
+
     /// Decrypts and returns an encrypted message ``ciphertext``, using the secret key ``sk``, public key ``pk``, and the nonce ``nonce``.
     ///
     /// - Parameters:
@@ -429,7 +434,9 @@ public struct CryptoBox {
     ///
     /// - Returns: The decrypted message.
     /// - Throws: Raises a `SodiumError` if input is invalid.
-    public func openEasy(ciphertext: Data, nonce: Data, publicKey: Data, secretKey: Data) throws -> Data {
+    public func openEasy(ciphertext: Data, nonce: Data, publicKey: Data, secretKey: Data) throws
+        -> Data
+    {
         try ensure(
             nonce.count == nonceBytes,
             raising: .valueError("Invalid nonce size")
@@ -450,25 +457,26 @@ public struct CryptoBox {
         try ensure(
             ciphertextLength >= macBytes,
             raising:
-                    .runtimeError(
-                        "Input ciphertext must be at least \(macBytes) bytes long"
-                    )
+                .runtimeError(
+                    "Input ciphertext must be at least \(macBytes) bytes long"
+                )
         )
 
         let messageLength = ciphertextLength - macBytes
         var plaintext = Data(count: messageLength)
-        
+
         let rc = plaintext.withUnsafeMutableBytes { plaintextPtr in
             ciphertext.withUnsafeBytes { ciphertextPtr in
                 nonce.withUnsafeBytes { noncePtr in
                     publicKey.withUnsafeBytes { publicKeyPtr in
                         secretKey.withUnsafeBytes { secretKeyPtr in
                             guard let plaintextRawPtr = plaintextPtr.baseAddress,
-                                  let ciphertextRawPtr = ciphertextPtr.baseAddress,
-                                  let nonceRawPtr = noncePtr.baseAddress,
-                                  let publicKeyRawPtr = publicKeyPtr.baseAddress,
-                                  let secretKeyRawPtr = secretKeyPtr.baseAddress else {
-                                return Int32(-1) // Return an appropriate error code in case of failure
+                                let ciphertextRawPtr = ciphertextPtr.baseAddress,
+                                let nonceRawPtr = noncePtr.baseAddress,
+                                let publicKeyRawPtr = publicKeyPtr.baseAddress,
+                                let secretKeyRawPtr = secretKeyPtr.baseAddress
+                            else {
+                                return Int32(-1)  // Return an appropriate error code in case of failure
                             }
                             return crypto_box_open_easy(
                                 plaintextRawPtr.assumingMemoryBound(to: UInt8.self),
@@ -483,12 +491,13 @@ public struct CryptoBox {
                 }
             }
         }
-        
-        try ensure(rc == 0, raising: .runtimeError("An error occurred trying to decrypt the message"))
+
+        try ensure(
+            rc == 0, raising: .runtimeError("An error occurred trying to decrypt the message"))
 
         return plaintext
     }
-    
+
     /// Encrypts and returns the message ``message`` using the shared key ``k`` and the nonce ``nonce``.
     ///
     /// - Parameters:
@@ -508,20 +517,21 @@ public struct CryptoBox {
             sharedKey.count == beforeNmBytes,
             raising: .valueError("Invalid shared key")
         )
-        
+
         let messageLength = message.count
         let ciphertextLength = macBytes + messageLength
-        
+
         var ciphertext = Data(count: ciphertextLength)
-        
+
         let rc = ciphertext.withUnsafeMutableBytes { ciphertextPtr in
             message.withUnsafeBytes { messagePtr in
                 nonce.withUnsafeBytes { noncePtr in
                     sharedKey.withUnsafeBytes { sharedKeyPtr in
                         guard let ciphertextRawPtr = ciphertextPtr.baseAddress,
-                              let messageRawPtr = messagePtr.baseAddress,
-                              let nonceRawPtr = noncePtr.baseAddress,
-                              let sharedKeyRawPtr = sharedKeyPtr.baseAddress else {
+                            let messageRawPtr = messagePtr.baseAddress,
+                            let nonceRawPtr = noncePtr.baseAddress,
+                            let sharedKeyRawPtr = sharedKeyPtr.baseAddress
+                        else {
                             return Int32(-1)
                         }
                         return crypto_box_easy_afternm(
@@ -540,7 +550,7 @@ public struct CryptoBox {
 
         return ciphertext
     }
-    
+
     /// Decrypts and returns the encrypted message ``ciphertext``, using the shared key ``k`` and the nonce ``nonce``.
     ///
     /// - Parameters:
@@ -559,26 +569,27 @@ public struct CryptoBox {
             sharedKey.count == beforeNmBytes,
             raising: .valueError("Invalid shared key")
         )
-        
+
         let ciphertextLength = ciphertext.count
-        
+
         try ensure(
             ciphertextLength >= macBytes,
             raising: .valueError("Input ciphertext must be at least \(macBytes) bytes long")
         )
-        
+
         let messageLength = ciphertextLength - macBytes
-        
+
         var plaintext = Data(count: messageLength)
-        
+
         let rc = plaintext.withUnsafeMutableBytes { plaintextPtr in
             ciphertext.withUnsafeBytes { ciphertextPtr in
                 nonce.withUnsafeBytes { noncePtr in
                     sharedKey.withUnsafeBytes { sharedKeyPtr in
                         guard let plaintextRawPtr = plaintextPtr.baseAddress,
-                              let ciphertextRawPtr = ciphertextPtr.baseAddress,
-                              let nonceRawPtr = noncePtr.baseAddress,
-                              let sharedKeyRawPtr = sharedKeyPtr.baseAddress else {
+                            let ciphertextRawPtr = ciphertextPtr.baseAddress,
+                            let nonceRawPtr = noncePtr.baseAddress,
+                            let sharedKeyRawPtr = sharedKeyPtr.baseAddress
+                        else {
                             return Int32(-1)
                         }
                         return crypto_box_open_easy_afternm(
@@ -592,8 +603,9 @@ public struct CryptoBox {
                 }
             }
         }
-        
-        try ensure(rc == 0, raising: .runtimeError("An error occurred trying to decrypt the message"))
+
+        try ensure(
+            rc == 0, raising: .runtimeError("An error occurred trying to decrypt the message"))
 
         return plaintext
     }
@@ -615,15 +627,16 @@ public struct CryptoBox {
 
         let messageLength = message.count
         let ciphertextLength = sealBytes + messageLength
-        
+
         var ciphertext = Data(count: ciphertextLength)
-        
+
         let rc = ciphertext.withUnsafeMutableBytes { ciphertextPtr in
             message.withUnsafeBytes { messagePtr in
                 publicKey.withUnsafeBytes { publicKeyPtr in
                     guard let ciphertextRawPtr = ciphertextPtr.baseAddress,
-                          let messageRawPtr = messagePtr.baseAddress,
-                          let publicKeyRawPtr = publicKeyPtr.baseAddress else {
+                        let messageRawPtr = messagePtr.baseAddress,
+                        let publicKeyRawPtr = publicKeyPtr.baseAddress
+                    else {
                         return Int32(-1)
                     }
                     return crypto_box_seal(
@@ -635,13 +648,13 @@ public struct CryptoBox {
                 }
             }
         }
-        
+
         try ensure(rc == 0, raising: SodiumError.runtimeError("Unexpected library error"))
 
         return ciphertext
     }
 
-    /// Decrypts and returns an encrypted message ``ciphertext``, using the recipent's secret key ``sk`` and the sender's ephemeral public key embedded in the sealed box. The box construct nonce is derived from the recipient's public key ``pk`` and the sender's public key.
+    /// Decrypts and returns an encrypted message ``ciphertext``, using the recipient's secret key ``sk`` and the sender's ephemeral public key embedded in the sealed box. The box construct nonce is derived from the recipient's public key ``pk`` and the sender's public key.
     ///
     /// - Parameters:
     ///  - ciphertext: `Data`
@@ -650,8 +663,7 @@ public struct CryptoBox {
     ///
     /// - Returns: The decrypted message.
     /// - Throws: Raises a `SodiumError` if input is invalid.
-    public func sealOpen(ciphertext: Data, publicKey: Data, secretKey: Data) throws -> Data
-    {
+    public func sealOpen(ciphertext: Data, publicKey: Data, secretKey: Data) throws -> Data {
         try ensure(
             publicKey.count == publicKeyBytes,
             raising: .valueError("Invalid public key")
@@ -669,17 +681,18 @@ public struct CryptoBox {
         )
 
         let messageLength = ciphertextLength - sealBytes
-        
+
         var plaintext = Data(count: messageLength)
-        
+
         let rc = plaintext.withUnsafeMutableBytes { plaintextPtr in
             ciphertext.withUnsafeBytes { ciphertextPtr in
                 publicKey.withUnsafeBytes { publicKeyPtr in
                     secretKey.withUnsafeBytes { secretKeyPtr in
                         guard let plaintextRawPtr = plaintextPtr.baseAddress,
-                              let ciphertextRawPtr = ciphertextPtr.baseAddress,
-                              let publicKeyRawPtr = publicKeyPtr.baseAddress,
-                              let secretKeyRawPtr = secretKeyPtr.baseAddress else {
+                            let ciphertextRawPtr = ciphertextPtr.baseAddress,
+                            let publicKeyRawPtr = publicKeyPtr.baseAddress,
+                            let secretKeyRawPtr = secretKeyPtr.baseAddress
+                        else {
                             return Int32(-1)
                         }
                         return crypto_box_seal_open(
@@ -693,8 +706,10 @@ public struct CryptoBox {
                 }
             }
         }
-        
-        try ensure(rc == 0, raising: SodiumError.runtimeError("An error occurred trying to decrypt the message"))
+
+        try ensure(
+            rc == 0,
+            raising: SodiumError.runtimeError("An error occurred trying to decrypt the message"))
 
         return plaintext
     }

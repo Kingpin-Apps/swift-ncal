@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "B5A8A6D6-D764-4831-98F2-0759E2F4F556",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SwiftNcalTests",
+        "name" : "SwiftNcalTests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -4,7 +4,7 @@ import XCTest
 @testable import SwiftNcal
 
 class CryptoPwHashTests: XCTestCase {
-    let cryptoPwHash = SwiftNcal().cryptoPwHash
+    let cryptoPwHash = Sodium().cryptoPwHash
 
     func testScryptsalsa208sha256LL() throws {
         let passwd = "password".data(using: .utf8)!

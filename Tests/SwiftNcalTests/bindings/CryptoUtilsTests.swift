@@ -2,8 +2,8 @@ import XCTest
 import Foundation
 @testable import SwiftNcal
 
-final class SodiumUtilityTests: XCTestCase {
-    let utils = SwiftNcal().utils
+final class CryptoUtilityTests: XCTestCase {
+    let utils = Sodium().utils
 
     // MARK: - sodiumMemcmp Tests
     

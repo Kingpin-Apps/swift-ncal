@@ -1,35 +1,38 @@
-import Foundation
 import Clibsodium
+import Foundation
+
+nonisolated(unsafe) private let sodium = Sodium()
 
 struct KeyPair: Hashable {
     var publicKey: PublicKey
-    
+
     var secretKey: PrivateKey
-    
+
     init(publicKey: PublicKey, secretKey: PrivateKey) {
         self.publicKey = publicKey
         self.secretKey = secretKey
     }
 }
 
-class PublicKey: Hashable {
-    /*
-     The public key counterpart to an Curve25519 `PrivateKey`
-     for encrypting messages.
+/*
+ The public key counterpart to an Curve25519 `PrivateKey`
+ for encrypting messages.
 
-     - Parameter publicKey: Encoded Curve25519 public key
-     - Parameter encoder: A class that is able to decode the `public_key`
-     */
-    
-    static let SIZE = Int(crypto_box_publickeybytes())
+ - Parameter publicKey: Encoded Curve25519 public key
+ - Parameter encoder: A class that is able to decode the `public_key`
+ */
+class PublicKey: Hashable {
+    static let SIZE = sodium.cryptoBox.publicKeyBytes
 
     private var _publicKey: Data
 
     init(publicKey: Data, encoder: Encoder.Type = RawEncoder.self) throws {
         self._publicKey = encoder.decode(data: publicKey)
-        guard self._publicKey.count == PublicKey.SIZE else {
-            throw NSError(domain: "PublicKey", code: 1, userInfo: [NSLocalizedDescriptionKey: "The public key must be exactly \(PublicKey.SIZE) bytes long"])
-        }
+
+        try ensure(
+            self._publicKey.count == PublicKey.SIZE,
+            raising: .valueError("The public key must be exactly \(PublicKey.SIZE) bytes long")
+        )
     }
 
     func toBytes() -> Data {
@@ -41,93 +44,222 @@ class PublicKey: Hashable {
     }
 
     static func == (lhs: PublicKey, rhs: PublicKey) -> Bool {
-        return lhs._publicKey == rhs._publicKey
+        return sodium.utils.sodiumMemcmp(lhs._publicKey, rhs._publicKey)
     }
 }
 
+/*
+ Private key for decrypting messages using the Curve25519 algorithm.
+
+ - Warning: This **must** be protected and remain secret. Anyone who
+ knows the value of your :class:`~nacl.public.PrivateKey` can decrypt
+ any message encrypted by the corresponding `PublicKey`
+
+ - Parameter privateKey: The private key used to decrypt messages
+ - Parameter encoder: The encoder class used to decode the given keys
+ */
 class PrivateKey: Hashable {
-    static let SIZE = Int(crypto_box_secretkeybytes())
-    static let SEED_SIZE = Int(crypto_box_seedbytes())
+    static let SIZE = sodium.cryptoBox.secretKeyBytes
+    static let SEED_SIZE = sodium.cryptoBox.seedBytes
 
     private var _privateKey: Data
     var publicKey: PublicKey
 
     init(privateKey: Data, encoder: Encoder.Type = RawEncoder.self) throws {
         self._privateKey = encoder.decode(data: privateKey)
-        guard self._privateKey.count == PrivateKey.SIZE else {
-            throw NSError(domain: "PrivateKey", code: 1, userInfo: [NSLocalizedDescriptionKey: "The private key must be exactly \(PrivateKey.SIZE) bytes long"])
-        }
-        // Generate public key
-        let rawPublicKey = self._privateKey // This should be replaced with actual public key generation logic
+
+        try ensure(
+            self._privateKey.count == PrivateKey.SIZE,
+            raising: .valueError("The private key must be exactly \(PrivateKey.SIZE) bytes long")
+        )
+
+        let rawPublicKey = try sodium.cryptoScalarmult.base(
+            n: self._privateKey
+        )
         self.publicKey = try PublicKey(publicKey: rawPublicKey)
     }
 
+    /*
+     Generate a PrivateKey using a deterministic construction starting from a caller-provided seed
+
+     - Warning: The seed **must** be high-entropy; therefore,
+     its generator **must** be a cryptographic quality
+     random function like, for example, :func:`~nacl.utils.random`.
+
+     - Warning: The seed **must** be protected and remain secret.
+     Anyone who knows the seed is really in possession of the corresponding PrivateKey.
+
+     - Parameter seed: The seed used to generate the private key
+     */
     static func fromSeed(seed: Data, encoder: Encoder.Type = RawEncoder.self) throws -> PrivateKey {
         let decodedSeed = encoder.decode(data: seed)
-        guard decodedSeed.count == PrivateKey.SEED_SIZE else {
-            throw NSError(domain: "PrivateKey", code: 2, userInfo: [NSLocalizedDescriptionKey: "The seed must be exactly \(PrivateKey.SEED_SIZE) bytes long"])
-        }
-        // Generate key pair from seed
-        let rawPrivateKey = decodedSeed // This should be replaced with actual key pair generation logic
+
+        try ensure(
+            decodedSeed.count == PrivateKey.SEED_SIZE,
+            raising: .valueError("The seed must be exactly \(PrivateKey.SEED_SIZE) bytes long")
+        )
+
+        let (rawPrivateKey, _) = try sodium.cryptoBox.seedKeypair(seed: decodedSeed)
         return try PrivateKey(privateKey: rawPrivateKey)
     }
 
     func toBytes() -> Data {
         return _privateKey
     }
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(KeyPair(publicKey: self.publicKey, secretKey: self))
     }
 
     static func == (lhs: PrivateKey, rhs: PrivateKey) -> Bool {
-        return lhs.publicKey == rhs.publicKey
+        return sodium.utils
+            .sodiumMemcmp(lhs.publicKey.toBytes(), rhs.publicKey.toBytes())
     }
 
+    /*
+     Generates a random `PrivateKey` object
+
+        - Returns: A randomly generated `PrivateKey`
+     */
     static func generate() -> PrivateKey {
-        let randomBytes = Data((0..<PrivateKey.SIZE).map { _ in UInt8.random(in: 0...255) })
+        let randomBytes = Data(random(size: PrivateKey.SIZE))
         return try! PrivateKey(privateKey: randomBytes)
     }
 }
 
+/*
+ The Box class boxes and unboxes messages between a pair of keys
+
+ The ciphertexts generated by `Box` include a 16
+ byte authenticator which is checked as part of the decryption. An invalid
+ authenticator will cause the decrypt function to raise an exception. The
+ authenticator is not a signature. Once you've decrypted the message you've
+ demonstrated the ability to create arbitrary valid message, so messages you
+ send are repudiable. For non-repudiable messages, sign them after
+ encryption.
+
+    - Parameter privateKey: The private key used to decrypt messages
+    - Parameter publicKey: The public key used to encrypt messages
+ */
 class Box {
-    static let NONCE_SIZE = 24 // Assuming 24 bytes for nonce
+    static let NONCE_SIZE = sodium.cryptoBox.nonceBytes
 
     private var _sharedKey: Data
 
     init(privateKey: PrivateKey, publicKey: PublicKey) throws {
-        // Generate shared key
-        self._sharedKey = privateKey.toBytes() // This should be replaced with actual shared key generation logic
+        self._sharedKey = try sodium.cryptoBox.beforenm(
+            publicKey: publicKey.toBytes(),
+            secretKey: privateKey.toBytes()
+        )
     }
 
-    func toBytes() -> Data {
-        return _sharedKey
+    /// Alternative constructor. Creates a Box from an existing Box's shared key.
+    init(encoded: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+        self._sharedKey = encoder.decode(data: encoded)
     }
 
-    func encrypt(plaintext: Data, nonce: Data? = nil, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
-        let nonce = nonce ?? Data((0..<Box.NONCE_SIZE).map { _ in UInt8.random(in: 0...255) })
-        guard nonce.count == Box.NONCE_SIZE else {
-            throw NSError(domain: "Box", code: 1, userInfo: [NSLocalizedDescriptionKey: "The nonce must be exactly \(Box.NONCE_SIZE) bytes long"])
+    static func generate() -> PrivateKey {
+        let randomBytes = Data(random(size: PrivateKey.SIZE))
+        return try! PrivateKey(privateKey: randomBytes)
+    }
+
+    /*
+     Encrypts the plaintext message using the given `nonce` (or generates
+     one randomly if omitted) and returns the ciphertext encoded with the
+     encoder.
+
+     - Warning: It is **VITALLY** important that the nonce is a nonce,
+     i.e. it is a number used only once for any given key. If you fail
+     to do this, you compromise the privacy of the messages encrypted.
+
+        - Parameter plaintext: The message to encrypt
+        - Parameter nonce: The nonce to use for the encryption
+        - Parameter encoder: The encoder class used to encode the nonce and ciphertext
+     */
+    public func encrypt(
+        plaintext: Data, nonce: Data? = nil, encoder: Encoder.Type = RawEncoder.self
+    ) throws -> EncryptedMessage {
+        let nonce = nonce ?? Data(random(size: Box.NONCE_SIZE))
+
+        try ensure(
+            nonce.count == Box.NONCE_SIZE,
+            raising: .valueError("The nonce must be exactly \(Box.NONCE_SIZE) bytes long")
+        )
+
+        let ciphertext = try sodium.cryptoBox.easyAfternm(
+            message: plaintext,
+            nonce: nonce,
+            sharedKey: self._sharedKey
+        )
+
+        let encodedNonce = encoder.encode(data: nonce)
+        let encodedCiphertext = encoder.encode(data: ciphertext)
+
+        return EncryptedMessage.fromParts(
+            nonce: encodedNonce,
+            ciphertext: encodedCiphertext,
+            combined: encoder.encode(data: nonce + ciphertext)
+        )
+    }
+
+    /*
+     Decrypts the ciphertext using the `nonce` (explicitly, when passed as a
+     parameter or implicitly, when omitted, as part of the ciphertext) and
+     returns the plaintext message.
+
+         - Warning: It is **VITALLY** important that you use a nonce with your
+         symmetric cipher. If you fail to do this, you compromise the
+         privacy of the messages encrypted. Ensure that the key length of
+         your cipher is 32 bytes.
+     */
+    public func decrypt(
+        ciphertext: Data, nonce: Data? = nil, encoder: Encoder.Type = RawEncoder.self
+    ) throws -> Data {
+        var ciphertext = encoder.decode(data: ciphertext)
+        var nonceData = nonce
+
+        if nonceData == nil {
+            nonceData = ciphertext.prefix(Box.NONCE_SIZE)
+            ciphertext = ciphertext.suffix(from: Box.NONCE_SIZE)
         }
-        let ciphertext = plaintext // This should be replaced with actual encryption logic
-        return encoder.encode(data: nonce + ciphertext)
-    }
 
-    func decrypt(ciphertext: Data, nonce: Data? = nil, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
-        let decodedCiphertext = encoder.decode(data: ciphertext)
-        let nonce = nonce ?? decodedCiphertext.prefix(Box.NONCE_SIZE)
-        guard nonce.count == Box.NONCE_SIZE else {
-            throw NSError(domain: "Box", code: 2, userInfo: [NSLocalizedDescriptionKey: "The nonce must be exactly \(Box.NONCE_SIZE) bytes long"])
-        }
-        let plaintext = decodedCiphertext.dropFirst(Box.NONCE_SIZE) // This should be replaced with actual decryption logic
+        try ensure(
+            nonceData!.count == Box.NONCE_SIZE,
+            raising: .valueError("The nonce must be exactly \(Box.NONCE_SIZE) bytes long")
+        )
+
+        let plaintext = try sodium.cryptoBox.openEasyAfternm(
+            ciphertext: ciphertext,
+            nonce: nonceData!,
+            sharedKey: self._sharedKey
+        )
         return plaintext
     }
+    /*
+     Returns the Curve25519 shared secret, that can then be used as a key in
+     other symmetric ciphers.
 
-    func sharedKey() -> Data {
+        - Parameter ciphertext: The message to decrypt
+        - Parameter nonce: The nonce to use for the decryption
+        - Parameter encoder: The encoder class used to decode the nonce and ciphertext
+     */
+    public func sharedKey() -> Data {
         return _sharedKey
     }
 }
 
+/*
+ The SealedBox class boxes and unboxes messages addressed to
+ a specified key-pair by using ephemeral sender's key pairs,
+ whose private part will be discarded just after encrypting
+ a single plaintext message.
+
+ The ciphertexts generated by :class:`~nacl.public.SecretBox` include
+ the public part of the ephemeral key before the :class:`~nacl.public.Box`
+ ciphertext.
+
+    - Parameter recipientKey: A `PublicKey` used to encrypt messages and derive nonces, or a :class:`~nacl.public.PrivateKey` used to decrypt messages.
+ */
 class SealedBox {
     private var publicKey: Data
     private var privateKey: Data?
@@ -146,17 +278,47 @@ class SealedBox {
         return publicKey
     }
 
-    func encrypt(plaintext: Data) -> Data {
-        let ciphertext = plaintext // This should be replaced with actual encryption logic
-        return RawEncoder.encode(data: ciphertext)
+    /*
+     Encrypts the plaintext message using a random-generated ephemeral
+     key pair and returns a "composed ciphertext", containing both
+     the public part of the key pair and the ciphertext proper,
+     encoded with the encoder.
+
+     The private part of the ephemeral key-pair will be scrubbed before
+     returning the ciphertext, therefore, the sender will not be able to
+     decrypt the generated ciphertext.
+
+        - Parameter plaintext: The message to encrypt
+        - Parameter encoder: The encoder class used to encode the ciphertext
+     */
+    func encrypt(plaintext: Data, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
+        let ciphertext = try sodium.cryptoBox.seal(
+            message: plaintext,
+            publicKey: self.publicKey
+        )
+        return encoder.encode(data: ciphertext)
     }
 
-    func decrypt(ciphertext: Data, encoder: RawEncoder) throws -> Data {
-        guard privateKey != nil else {
-            throw NSError(domain: "SealedBox", code: 1, userInfo: [NSLocalizedDescriptionKey: "SealedBoxes created with a public key cannot decrypt"])
-        }
-        let decodedCiphertext = RawEncoder.decode(data: ciphertext)
-        let plaintext = decodedCiphertext // This should be replaced with actual decryption logic
+    /*
+     Decrypts the ciphertext using the ephemeral public key enclosed
+     in the ciphertext and the SealedBox private key, returning
+     the plaintext message.
+
+        - Parameter ciphertext: The message to decrypt
+        - Parameter encoder: The encoder class used to decode the ciphertext
+     */
+    func decrypt(ciphertext: Data, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
+        try ensure(
+            privateKey != nil,
+            raising: .valueError("SealedBoxes created with a public key cannot decrypt")
+        )
+
+        let ciphertext = encoder.decode(data: ciphertext)
+        let plaintext = try sodium.cryptoBox.sealOpen(
+            ciphertext: ciphertext,
+            publicKey: self.publicKey,
+            secretKey: self.privateKey!
+        )
         return plaintext
     }
 }
