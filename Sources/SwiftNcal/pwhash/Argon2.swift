@@ -1,23 +1,42 @@
 import Clibsodium
 import Foundation
 
-nonisolated(unsafe) private let sodium = Sodium()
-
 public struct Argon2 {
-    public let strbytesPlusOne = sodium.cryptoPwHash.strBytes
+    public let strbytesPlusOne: Int
 
-    public let pwhashSize = sodium.cryptoPwHash.strBytes - 1
-    public let saltBytes = sodium.cryptoPwHash.saltBytes
+    public let pwhashSize: Int
+    public let saltBytes: Int
 
-    public let passwdMin = sodium.cryptoPwHash.passwdMin
-    public let passwdMax = sodium.cryptoPwHash.passwdMax
+    public let passwdMin: Int
+    public let passwdMax: Int
 
-    public let bytesMax = sodium.cryptoPwHash.bytesMax
-    public let bytesMin = sodium.cryptoPwHash.bytesMin
+    public let bytesMax: Int
+    public let bytesMin: Int
 
-    public let algArgon2i13 = sodium.cryptoPwHash.algArgon2i13
-    public let algArgon2id13 = sodium.cryptoPwHash.algArgon2id13
-    public let algArgon2Default = sodium.cryptoPwHash.algDefault
+    public let algArgon2i13: Int
+    public let algArgon2id13: Int
+    public let algArgon2Default: Int
+    
+    private let sodium: Sodium
+    
+    public init() {
+        self.sodium = Sodium()
+        
+        self.strbytesPlusOne = sodium.cryptoPwHash.strBytes
+
+        self.pwhashSize = sodium.cryptoPwHash.strBytes - 1
+        self.saltBytes = sodium.cryptoPwHash.saltBytes
+
+        self.passwdMin = sodium.cryptoPwHash.passwdMin
+        self.passwdMax = sodium.cryptoPwHash.passwdMax
+
+        self.bytesMax = sodium.cryptoPwHash.bytesMax
+        self.bytesMin = sodium.cryptoPwHash.bytesMin
+
+        self.algArgon2i13 = sodium.cryptoPwHash.algArgon2i13
+        self.algArgon2id13 = sodium.cryptoPwHash.algArgon2id13
+        self.algArgon2Default = sodium.cryptoPwHash.algDefault
+    }
 
     /**
      Takes a modular crypt encoded argon2i or argon2id stored password hash

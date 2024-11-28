@@ -32,7 +32,7 @@ public struct PwHash {
     public let scryptOpsLimitSensitive: Int
     public let scryptMemLimitSensitive: Int
     
-    init() {
+    public init() {
         self.strPrefix = argon2id.strPrefix
         self.pwhashSize = argon2id.pwhashSize
         self.passwdMin = argon2id.passwdMin

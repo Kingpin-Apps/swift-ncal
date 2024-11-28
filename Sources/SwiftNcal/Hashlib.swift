@@ -1,20 +1,20 @@
 import Clibsodium
 import Foundation
 
-nonisolated(unsafe) private let sodium = Sodium()
-
-class Blake2b {
+public class Blake2b {
     /// Maximum digest size
-    static let maxDigestSize = sodium.cryptoGenericHash.bytes
+    public let maxDigestSize: Int
     /// Maximum key size
-    static let maxKeySize = sodium.cryptoGenericHash.keyBytes
+    public let maxKeySize: Int
     /// Personalization size
-    static let personSize = sodium.cryptoGenericHash.personalBytes
+    public let personSize: Int
     /// Salt size
-    static let saltSize = sodium.cryptoGenericHash.saltBytes
+    public let saltSize: Int
 
     private var state: Blake2State
     private var digestSize: Int
+    
+    private let sodium: Sodium
 
     /// Blake2b algorithm initializer
     ///
@@ -24,72 +24,94 @@ class Blake2b {
     ///   - key: The key to be set for keyed MAC/PRF usage; if set, the key must be at most `maxKeySize` long.
     ///   - salt: An initialization salt at most `saltSize` long; it will be zero-padded if needed.
     ///   - person: A personalization string at most `personSize` long; it will be zero-padded if needed.
-    init(data: Data = Data(), digestSize: Int? = nil, key: Data = Data(), salt: Data = Data(), person: Data = Data()) throws {
+    public init(data: Data = Data(), digestSize: Int? = nil, key: Data = Data(), salt: Data = Data(), person: Data = Data()) throws {
+        self.sodium = Sodium()
+        
+        self.maxDigestSize = sodium.cryptoGenericHash.bytes
+        self.maxKeySize = sodium.cryptoGenericHash.keyBytes
+        self.personSize = sodium.cryptoGenericHash.personalBytes
+        self.saltSize = sodium.cryptoGenericHash.saltBytes
+        
         self.state = try sodium.cryptoGenericHash
             .blake2bInit(
                 key: key,
                 salt: salt,
                 person: person,
-                digestSize: digestSize ?? Blake2b.maxDigestSize
+                digestSize: digestSize ?? maxDigestSize
             )
-        self.digestSize = digestSize ?? Blake2b.maxDigestSize
+        self.digestSize = digestSize ?? maxDigestSize
 
         if !data.isEmpty {
             try self.update(data: data)
         }
     }
 
-    var blockSize: Int {
+    public var blockSize: Int {
         return 128
     }
 
-    var name: String {
+    public var name: String {
         return "blake2b"
     }
 
-    func update(data: Data) throws {
+    public func update(data: Data) throws {
         try sodium.cryptoGenericHash.blake2bUpdate(state: self.state, data: data)
     }
 
-    func digest() throws -> Data {
+    public func digest() throws -> Data {
         return try sodium.cryptoGenericHash.blake2bFinal(state: self.state)
     }
 
-    func hexdigest() throws -> String {
+    public func hexdigest() throws -> String {
         return bytesAsString(bytesIn: try digest())
     }
 
-    func copy() throws -> Blake2b {
+    public func copy() throws -> Blake2b {
         let copy = try Blake2b(
             digestSize: self.digestSize)
         copy.state = self.state.copy()
         return copy
     }
 
-    func reduce() throws -> Never {
+    public func reduce() throws -> Never {
         throw SodiumError.unavailableError("can't pickle Blake2b objects")
     }
 }
 
 public struct Hashlib {
-    let bytes = sodium.cryptoGenericHash.bytes
+    public let bytes: Int
     /// Default digest size for `blake2b` hash
-    let bytesMin = sodium.cryptoGenericHash.bytesMin
+    public let bytesMin: Int
     /// Minimum allowed digest size for `blake2b` hash
-    let bytesMax = sodium.cryptoGenericHash.bytesMax
+    public let bytesMax: Int
     /// Maximum allowed digest size for `blake2b` hash
-    let keyBytes = sodium.cryptoGenericHash.keyBytes
+    public let keyBytes: Int
     /// Default size of the `key` byte array for `blake2b` hash
-    let keyBytesMin = sodium.cryptoGenericHash.keyBytesMin
+    public let keyBytesMin: Int
     /// Minimum allowed size of the `key` byte array for `blake2b` hash
-    let keyBytesMax = sodium.cryptoGenericHash.keyBytesMax
+    public let keyBytesMax: Int
     /// Maximum allowed size of the `key` byte array for `blake2b` hash
-    let saltBytes = sodium.cryptoGenericHash.saltBytes
+    public let saltBytes: Int
     /// Maximum allowed length of the `salt` byte array for `blake2b` hash
-    let personalBytes = sodium.cryptoGenericHash.personalBytes
+    public let personalBytes: Int
     /// Maximum allowed length of the `personalization` byte array for `blake2b` hash
+    
+    private let sodium: Sodium
 
-    func scrypt(password: Data, salt: Data = Data(), n: Int = 1 << 4, r: Int = 8, p: Int = 1, maxmem: Int = 1 << 25, dklen: Int = 64) throws -> Data {
+    public init() {
+        self.sodium = Sodium()
+        
+        self.bytes = sodium.cryptoGenericHash.bytes
+        self.bytesMin = sodium.cryptoGenericHash.bytesMin
+        self.bytesMax = sodium.cryptoGenericHash.bytesMax
+        self.keyBytes = sodium.cryptoGenericHash.keyBytes
+        self.keyBytesMin = sodium.cryptoGenericHash.keyBytesMin
+        self.keyBytesMax = sodium.cryptoGenericHash.keyBytesMax
+        self.saltBytes = sodium.cryptoGenericHash.saltBytes
+        self.personalBytes = sodium.cryptoGenericHash.personalBytes
+    }
+    
+    public func scrypt(password: Data, salt: Data = Data(), n: Int = 1 << 4, r: Int = 8, p: Int = 1, maxmem: Int = 1 << 25, dklen: Int = 64) throws -> Data {
         /// Derive a cryptographic key using the scrypt KDF.
         ///
         /// - Parameters:

@@ -1,32 +1,60 @@
 import Clibsodium
 import Foundation
 
-nonisolated(unsafe) private let sodium = Sodium()
-
 public struct Argon2id {
-    public let alg = sodium.cryptoPwHash.algArgon2id13
-    public let strPrefix: String = sodium.cryptoPwHash.argon2idStrprefix
+    public let alg: Int
+    public let strPrefix: String
 
-    public let saltBytes = sodium.cryptoPwHash.saltBytes
+    public let saltBytes: Int
     
-    public let passwdMin = sodium.cryptoPwHash.passwdMin
-    public let passwdMax = sodium.cryptoPwHash.passwdMax
+    public let passwdMin: Int
+    public let passwdMax: Int
 
-    public let pwhashSize = sodium.cryptoPwHash.strBytes - 1
+    public let pwhashSize: Int
     
-    public let bytesMin = sodium.cryptoPwHash.bytesMin
-    public let bytesMax = sodium.cryptoPwHash.bytesMax
+    public let bytesMin: Int
+    public let bytesMax: Int
     
-    public let memLimitMin: Int = sodium.cryptoPwHash.argon2idMemlimitMin
-    public let memLimitMax: Int = sodium.cryptoPwHash.argon2idMemlimitMax
-    public let opsLimitMin: Int = sodium.cryptoPwHash.argon2idOpslimitMin
-    public let opsLimitMax: Int = sodium.cryptoPwHash.argon2idOpslimitMax
-    public let opsLimitInteractive: Int = sodium.cryptoPwHash.argon2idOpslimitInteractive
-    public let memLimitInteractive: Int = sodium.cryptoPwHash.argon2idMemlimitInteractive
-    public let opsLimitModerate: Int = sodium.cryptoPwHash.argon2idOpslimitModerate
-    public let memLimitModerate: Int = sodium.cryptoPwHash.argon2idMemlimitModerate
-    public let opsLimitSensitive: Int = sodium.cryptoPwHash.argon2idOpslimitSensitive
-    public let memLimitSensitive: Int = sodium.cryptoPwHash.argon2idMemlimitSensitive
+    public let memLimitMin: Int
+    public let memLimitMax: Int
+    public let opsLimitMin: Int
+    public let opsLimitMax: Int
+    public let opsLimitInteractive: Int
+    public let memLimitInteractive: Int
+    public let opsLimitModerate: Int
+    public let memLimitModerate: Int
+    public let opsLimitSensitive: Int
+    public let memLimitSensitive: Int
+    
+    private let sodium: Sodium
+    
+    public init() {
+        self.sodium = Sodium()
+        
+        self.alg = sodium.cryptoPwHash.algArgon2id13
+        self.strPrefix = sodium.cryptoPwHash.argon2idStrprefix
+
+        self.saltBytes = sodium.cryptoPwHash.saltBytes
+        
+        self.passwdMin = sodium.cryptoPwHash.passwdMin
+        self.passwdMax = sodium.cryptoPwHash.passwdMax
+
+        self.pwhashSize = sodium.cryptoPwHash.strBytes - 1
+        
+        self.bytesMin = sodium.cryptoPwHash.bytesMin
+        self.bytesMax = sodium.cryptoPwHash.bytesMax
+        
+        self.memLimitMin = sodium.cryptoPwHash.argon2idMemlimitMin
+        self.memLimitMax = sodium.cryptoPwHash.argon2idMemlimitMax
+        self.opsLimitMin = sodium.cryptoPwHash.argon2idOpslimitMin
+        self.opsLimitMax = sodium.cryptoPwHash.argon2idOpslimitMax
+        self.opsLimitInteractive = sodium.cryptoPwHash.argon2idOpslimitInteractive
+        self.memLimitInteractive = sodium.cryptoPwHash.argon2idMemlimitInteractive
+        self.opsLimitModerate = sodium.cryptoPwHash.argon2idOpslimitModerate
+        self.memLimitModerate = sodium.cryptoPwHash.argon2idMemlimitModerate
+        self.opsLimitSensitive = sodium.cryptoPwHash.argon2idOpslimitSensitive
+        self.memLimitSensitive = sodium.cryptoPwHash.argon2idMemlimitSensitive
+    }
 
     /**
      Takes a modular crypt encoded argon2i or argon2id stored password hash
@@ -72,7 +100,7 @@ public struct Argon2id {
 
      .. versionadded:: 1.2
      */
-    func kdf(size: Int, password: Data, salt: Data, opsLimit: Int? = nil, memLimit: Int? = nil, encoder: (Data) -> Data = { $0 }) throws -> Data {
+    public func kdf(size: Int, password: Data, salt: Data, opsLimit: Int? = nil, memLimit: Int? = nil, encoder: (Data) -> Data = { $0 }) throws -> Data {
         let memLim = memLimit ?? memLimitSensitive
         let opsLim = opsLimit ?? opsLimitSensitive
         return encoder(

@@ -1,26 +1,20 @@
 import Clibsodium
 import Foundation
 
-nonisolated(unsafe) private let sodium = Sodium()
-
 /// A Data subclass that holds a message that has been signed by a `SigningKey`.
-class SignedMessage {
+public class SignedMessage {
     
     private var signature: Data
     private var message: Data
     private var combined: Data
 
-    init(signature: Data, message: Data, combined: Data) {
+    public init(signature: Data, message: Data, combined: Data) {
         self.signature = signature
         self.message = message
         self.combined = combined
     }
 
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    class func fromParts(signature: Data, message: Data, combined: Data) -> SignedMessage {
+    public static func fromParts(signature: Data, message: Data, combined: Data) -> SignedMessage {
         return SignedMessage(signature: signature, message: message, combined: combined)
     }
 
@@ -45,26 +39,28 @@ class SignedMessage {
 /// - Parameters:
 ///    - key: Serialized Ed25519 public key
 ///    - encoder: The encoder to use for encoding and decoding data
-class VerifyKey: Equatable, Hashable {
+public class VerifyKey: Equatable, Hashable {
     private var key: Data
+    private let sodium: Sodium
 
-    init(key: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+    public init(key: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+        self.sodium = Sodium()
         // Decode the key
         self.key = encoder.decode(data: key)
         
         try ensure(self.key.count == sodium.cryptoSign.publicKeyBytes, raising: .valueError("The key must be exactly \(sodium.cryptoSign.publicKeyBytes) bytes long"))
     }
 
-    var bytes: Data {
+    public var bytes: Data {
         return self.key
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(self.key)
     }
 
-    static func == (lhs: VerifyKey, rhs: VerifyKey) -> Bool {
-        return sodium.utils.sodiumMemcmp(lhs.key, rhs.key)
+    public static func == (lhs: VerifyKey, rhs: VerifyKey) -> Bool {
+        return Sodium().utils.sodiumMemcmp(lhs.key, rhs.key)
     }
 
     /// Verifies the signature of a signed message, returning the message if it has not been tampered with else raising `BadSignatureError`.
@@ -74,7 +70,7 @@ class VerifyKey: Equatable, Hashable {
     ///    - signature: If an unsigned message is given for smessage then the detached signature must be provided.
     ///    - encoder: The encoder to use for encoding and decoding data.
     ///  - Returns: The original message if the signature is valid.
-    func verify(smessage: Data, signature: Data? = nil, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
+    public func verify(smessage: Data, signature: Data? = nil, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
         
         var signed: Data
         if let signature = signature {
@@ -90,7 +86,7 @@ class VerifyKey: Equatable, Hashable {
     }
 
     /// Converts a `VerifyKey` to a `PublicKey`
-    func toCurve25519PublicKey() throws -> PublicKey {
+    public func toCurve25519PublicKey() throws -> PublicKey {
         
         let rawPk = try sodium.cryptoSign.ed25519PkToCurve25519(
             publicKeyBytes: self.key
@@ -108,12 +104,15 @@ class VerifyKey: Equatable, Hashable {
 ///  - Parameters:
 ///  - seed: Random 32-byte value (i.e. private key)
 ///  - encoder: The encoder to use for encoding and decoding data
-class SigningKey {
+public class SigningKey: Equatable, Hashable {
+    public var verifyKey: VerifyKey
+    
     private var seed: Data
     private var signingKey: Data
-    var verifyKey: VerifyKey
+    private let sodium: Sodium
 
-    init(seed: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+    public init(seed: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+        self.sodium = Sodium()
         // Decode the seed
         self.seed = encoder.decode(data: seed)
         
@@ -127,22 +126,22 @@ class SigningKey {
         self.verifyKey = try VerifyKey(key: keyPair.publicKey)
     }
 
-    var bytes: Data {
+    public var bytes: Data {
         return self.seed
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(self.seed)
     }
 
-    static func == (lhs: SigningKey, rhs: SigningKey) -> Bool {
-        return sodium.utils
+    public static func == (lhs: SigningKey, rhs: SigningKey) -> Bool {
+        return Sodium().utils
             .sodiumMemcmp(lhs.seed, rhs.seed)
     }
 
     /// Generates a random `SigningKey` object.
-    class func generate() throws -> SigningKey {
-        return try SigningKey(seed: random(size: sodium.cryptoSign.seedBytes))
+    public static func generate() throws -> SigningKey {
+        return try SigningKey(seed: random(size: Sodium().cryptoSign.seedBytes))
     }
 
     /// Sign a message using this key.

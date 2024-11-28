@@ -32,6 +32,11 @@ class VerifyKeyTests: XCTestCase {
         XCTAssertEqual(verifyKey.bytes, Data(repeating: 0, count: sodium.cryptoSign.publicKeyBytes), "VerifyKey initialization failed")
     }
 
+    func testVerifyKeyHash() throws {
+        let verifyKey = try VerifyKey(key: Data(repeating: 0, count: sodium.cryptoSign.publicKeyBytes))
+        XCTAssertNotNil(verifyKey.hashValue, "VerifyKey hash failed")
+    }
+
     func testVerifyKeyInvalidSize() {
         let invalidPublicKeyData = Data(repeating: 0, count: sodium.cryptoSign.publicKeyBytes - 1)
         XCTAssertThrowsError(
@@ -42,6 +47,7 @@ class VerifyKeyTests: XCTestCase {
         let verifyKey1 = try VerifyKey(key: Data(repeating: 0, count: sodium.cryptoSign.publicKeyBytes))
         let verifyKey2 = try VerifyKey(key: Data(repeating: 0, count: sodium.cryptoSign.publicKeyBytes))
         XCTAssertEqual(verifyKey1, verifyKey2, "VerifyKey equality failed")
+        XCTAssertTrue(verifyKey1 == verifyKey2, "VerifyKey equality failed")
     }
 
     func testVerifyKeyVerify() throws {
@@ -49,6 +55,20 @@ class VerifyKeyTests: XCTestCase {
         let signedMessage = Data(repeating: 0, count: sodium.cryptoSign.bytes + 32)
         XCTAssertThrowsError(
             try verifyKey.verify(smessage: signedMessage), "Expected error for invalid signature")
+    }
+    
+    func testVerifyKeyVerifyInvalidSignature() throws {
+        let verifyKey = try VerifyKey(key: Data(repeating: 0, count: sodium.cryptoSign.publicKeyBytes))
+        let signedMessage = Data(repeating: 0, count: sodium.cryptoSign.bytes + 32)
+        let invalidSignature = Data(repeating: 0, count: 32)
+        XCTAssertThrowsError(
+            try verifyKey
+                .verify(
+                    smessage: signedMessage,
+                    signature: invalidSignature
+                ),
+            "Expected error for invalid signature size"
+        )
     }
 
     func testVerifyKeyToCurve25519PublicKey() throws {
@@ -66,6 +86,18 @@ class SigningKeyTests: XCTestCase {
     func testSigningKeyInit() throws {
         let signingKey = try SigningKey(seed: Data(repeating: 0, count: sodium.cryptoSign.seedBytes))
         XCTAssertEqual(signingKey.bytes, Data(repeating: 0, count: sodium.cryptoSign.seedBytes), "SigningKey initialization failed")
+    }
+    
+    func testSigningKeyHash() throws {
+        let signingKey = try SigningKey(seed: Data(repeating: 0, count: sodium.cryptoSign.seedBytes))
+        XCTAssertNotNil(signingKey.hashValue, "VerifyKey hash failed")
+    }
+    
+    func testSigningKeyEquality() throws {
+        let signingKey1 = try SigningKey(seed: Data(repeating: 0, count: sodium.cryptoSign.seedBytes))
+        let signingKey2 = try SigningKey(seed: Data(repeating: 0, count: sodium.cryptoSign.seedBytes))
+        XCTAssertEqual(signingKey1, signingKey2, "SigningKey equality failed")
+        XCTAssertTrue(signingKey1 == signingKey2, "SigningKey equality failed")
     }
 
     func testSigningKeyInvalidSize() {

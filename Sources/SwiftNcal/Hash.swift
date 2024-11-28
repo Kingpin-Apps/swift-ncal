@@ -1,37 +1,56 @@
 import Clibsodium
 import Foundation
 
-nonisolated(unsafe) private let sodium = Sodium()
-
 public struct Hash {
-    let blake2bBytes = sodium.cryptoGenericHash.bytes
+    public let blake2bBytes: Int
     /// Default digest size for `blake2b` hash
-    let blake2bBytesMin = sodium.cryptoGenericHash.bytesMin
+    public let blake2bBytesMin: Int
     /// Minimum allowed digest size for `blake2b` hash
-    let blake2bBytesMax = sodium.cryptoGenericHash.bytesMax
+    public let blake2bBytesMax: Int
     /// Maximum allowed digest size for `blake2b` hash
-    let blake2bKeyBytes = sodium.cryptoGenericHash.keyBytes
+    public let blake2bKeyBytes: Int
     /// Default size of the `key` byte array for `blake2b` hash
-    let blake2bKeyBytesMin = sodium.cryptoGenericHash.keyBytesMin
+    public let blake2bKeyBytesMin: Int
     /// Minimum allowed size of the `key` byte array for `blake2b` hash
-    let blake2bKeyBytesMax = sodium.cryptoGenericHash.keyBytesMax
+    public let blake2bKeyBytesMax: Int
     /// Maximum allowed size of the `key` byte array for `blake2b` hash
-    let blake2bSaltBytes = sodium.cryptoGenericHash.saltBytes
+    public let blake2bSaltBytes: Int
     /// Maximum allowed length of the `salt` byte array for `blake2b` hash
-    let blake2bPersonalBytes = sodium.cryptoGenericHash.personalBytes
+    public let blake2bPersonalBytes: Int
     /// Maximum allowed length of the `personalization` byte array for `blake2b` hash
 
-    let siphashBytes = sodium.cryptoShortHash.bytes
+    public let siphashBytes: Int
     /// Size of the `siphash24` digest
-    let siphashKeyBytes = sodium.cryptoShortHash.keyBytes
+    public let siphashKeyBytes: Int
     /// Size of the secret `key` used by the `siphash24` MAC
 
-    let siphashxBytes = sodium.cryptoShortHash.xBytes
+    public let siphashxBytes: Int
     /// Size of the `siphashx24` digest
-    let siphashxKeyBytes = sodium.cryptoShortHash.xKeyBytes
+    public let siphashxKeyBytes: Int
     /// Size of the secret `key` used by the `siphashx24` MAC
+    
+    private let sodium: Sodium
+    
+    public init() {
+        self.sodium = Sodium()
+        
+        self.blake2bBytes = sodium.cryptoGenericHash.bytes
+        self.blake2bBytesMin = sodium.cryptoGenericHash.bytesMin
+        self.blake2bBytesMax = sodium.cryptoGenericHash.bytesMax
+        self.blake2bKeyBytes = sodium.cryptoGenericHash.keyBytes
+        self.blake2bKeyBytesMin = sodium.cryptoGenericHash.keyBytesMin
+        self.blake2bKeyBytesMax = sodium.cryptoGenericHash.keyBytesMax
+        self.blake2bSaltBytes = sodium.cryptoGenericHash.saltBytes
+        self.blake2bPersonalBytes = sodium.cryptoGenericHash.personalBytes
 
-    func sha256(message: Data, encoder: Encoder.Type = HexEncoder.self) throws -> Data {
+        self.siphashBytes = sodium.cryptoShortHash.bytes
+        self.siphashKeyBytes = sodium.cryptoShortHash.keyBytes
+
+        self.siphashxBytes = sodium.cryptoShortHash.xBytes
+        self.siphashxKeyBytes = sodium.cryptoShortHash.xKeyBytes
+    }
+
+    public func sha256(message: Data, encoder: Encoder.Type = HexEncoder.self) throws -> Data {
         /// Hashes `message` with SHA256.
         ///
         /// - Parameters:
@@ -41,7 +60,7 @@ public struct Hash {
         return encoder.encode(data: try sodium.cryptoHash.sha256(message: message))
     }
 
-    func sha512(message: Data, encoder: Encoder.Type  = HexEncoder.self) throws -> Data {
+    public func sha512(message: Data, encoder: Encoder.Type  = HexEncoder.self) throws -> Data {
         /// Hashes `message` with SHA512.
         ///
         /// - Parameters:
@@ -52,7 +71,7 @@ public struct Hash {
             .encode(data: try sodium.cryptoHash.sha512(message: message))
     }
 
-    func blake2b(data: Data, digestSize: Int? = nil, key: Data = Data(), salt: Data = Data(), person: Data = Data(), encoder: Encoder.Type = HexEncoder.self) throws -> Data {
+    public func blake2b(data: Data, digestSize: Int? = nil, key: Data = Data(), salt: Data = Data(), person: Data = Data(), encoder: Encoder.Type = HexEncoder.self) throws -> Data {
         /// Hashes `data` with blake2b.
         ///
         /// - Parameters:
@@ -73,7 +92,7 @@ public struct Hash {
         return encoder.encode(data: digest)
     }
 
-    func siphash24(message: Data, key: Data = Data(), encoder: Encoder.Type = HexEncoder.self) throws -> Data {
+    public func siphash24(message: Data, key: Data = Data(), encoder: Encoder.Type = HexEncoder.self) throws -> Data {
         /// Computes a keyed MAC of `message` using the short-input-optimized siphash-2-4 construction.
         ///
         /// - Parameters:
@@ -88,7 +107,7 @@ public struct Hash {
         return encoder.encode(data: digest)
     }
 
-    func siphashx24(message: Data, key: Data = Data(), encoder: Encoder.Type = HexEncoder.self) throws -> Data {
+    public func siphashx24(message: Data, key: Data = Data(), encoder: Encoder.Type = HexEncoder.self) throws -> Data {
         /// Computes a keyed MAC of `message` using the 128 bit variant of the siphash-2-4 construction.
         ///
         /// - Parameters:

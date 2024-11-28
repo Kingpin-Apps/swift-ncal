@@ -27,7 +27,7 @@ class Blake2bTests: XCTestCase {
     }
 
     func testBlake2bUpdate() throws {
-        let blake2b = try Blake2b(digestSize: Blake2b.maxDigestSize)
+        let blake2b = try Blake2b(digestSize: sodium.cryptoGenericHash.bytes)
         try blake2b.update(data: message)
         let digest = try blake2b.digest()
         XCTAssertEqual(digest.count, 64, "Blake2b update digest size mismatch")
@@ -36,7 +36,7 @@ class Blake2bTests: XCTestCase {
     func testBlake2bDigest() throws {
         let blake2b = try Blake2b(
             data: message,
-            digestSize: Blake2b.maxDigestSize,
+            digestSize: sodium.cryptoGenericHash.bytes,
             key: key,
             salt: salt,
             person: person
@@ -48,7 +48,7 @@ class Blake2bTests: XCTestCase {
     func testBlake2bHexdigest() throws {
         let blake2b = try Blake2b(
             data: message,
-            digestSize: Blake2b.maxDigestSize,
+            digestSize: sodium.cryptoGenericHash.bytes,
             key: key,
             salt: salt,
             person: person

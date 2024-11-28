@@ -2,52 +2,76 @@ import XCTest
 
 @testable import SwiftNcal
 
+class KeyPairTests: XCTestCase {
+    func testKeyPairGenerate() {
+        let keyPair = KeyPair.generate()
+        XCTAssertNotNil(keyPair, "KeyPair generation failed")
+        XCTAssertNotNil(keyPair.publicKey, "PublicKey generation failed")
+        XCTAssertNotNil(keyPair.secretKey, "SecretKey generation failed")
+    }
+}
+
 class PublicKeyTests: XCTestCase {
     let sodium = Sodium()
-    let publicKeyData = Data(repeating: 0, count: PublicKey.SIZE)
 
     func testPublicKeyInit() throws {
+        let publicKeyData = Data(repeating: 0, count: sodium.cryptoBox.publicKeyBytes)
         let publicKey = try PublicKey(publicKey: publicKeyData)
         XCTAssertEqual(publicKey.toBytes(), publicKeyData, "PublicKey initialization failed")
     }
 
     func testPublicKeyInvalidSize() {
-        let invalidPublicKeyData = Data(repeating: 0, count: PublicKey.SIZE - 1)
+        let invalidPublicKeyData = Data(repeating: 0, count: sodium.cryptoBox.publicKeyBytes - 1)
         XCTAssertThrowsError(
             try PublicKey(publicKey: invalidPublicKeyData),
             "Expected error for invalid public key size")
     }
+    
+    func testSigningKeyHash() throws {
+        let publicKeyData = Data(repeating: 0, count: sodium.cryptoBox.publicKeyBytes)
+        let publicKey = try PublicKey(publicKey: publicKeyData)
+        XCTAssertNotNil(publicKey.hashValue, "PublicKey hash failed")
+    }
 
     func testPublicKeyEquality() throws {
+        let publicKeyData = Data(repeating: 0, count: sodium.cryptoBox.publicKeyBytes)
         let publicKey1 = try PublicKey(publicKey: publicKeyData)
         let publicKey2 = try PublicKey(publicKey: publicKeyData)
         XCTAssertEqual(publicKey1, publicKey2, "PublicKey equality failed")
+        XCTAssertTrue(publicKey1 == publicKey2, "PublicKey equality failed")
     }
 }
 
 class PrivateKeyTests: XCTestCase {
     let sodium = Sodium()
-    let privateKeyData = Data(repeating: 0, count: PrivateKey.SIZE)
 
     func testPrivateKeyInit() throws {
+        let privateKeyData = Data(repeating: 0, count: sodium.cryptoBox.secretKeyBytes)
         let privateKey = try PrivateKey(privateKey: privateKeyData)
         XCTAssertEqual(privateKey.toBytes(), privateKeyData, "PrivateKey initialization failed")
     }
 
     func testPrivateKeyInvalidSize() {
-        let invalidPrivateKeyData = Data(repeating: 0, count: PrivateKey.SIZE - 1)
+        let invalidPrivateKeyData = Data(repeating: 0, count: sodium.cryptoBox.secretKeyBytes - 1)
         XCTAssertThrowsError(
             try PrivateKey(privateKey: invalidPrivateKeyData),
             "Expected error for invalid private key size")
     }
 
     func testPrivateKeyFromSeed() throws {
-        let seed = Data(repeating: 0, count: PrivateKey.SEED_SIZE)
+        let seed = Data(repeating: 0, count: sodium.cryptoBox.secretKeyBytes)
         let privateKey = try PrivateKey.fromSeed(seed: seed)
-        XCTAssertEqual(privateKey.toBytes().count, PrivateKey.SIZE, "PrivateKey from seed failed")
+        XCTAssertEqual(privateKey.toBytes().count, sodium.cryptoBox.secretKeyBytes, "PrivateKey from seed failed")
+    }
+    
+    func testPrivateKeyHash() throws {
+        let seed = Data(repeating: 0, count: sodium.cryptoBox.secretKeyBytes)
+        let privateKey = try PrivateKey.fromSeed(seed: seed)
+        XCTAssertNotNil(privateKey.hashValue, "PrivateKey hash failed")
     }
 
     func testPrivateKeyEquality() throws {
+        let privateKeyData = Data(repeating: 0, count: sodium.cryptoBox.secretKeyBytes)
         let privateKey1 = try PrivateKey(privateKey: privateKeyData)
         let privateKey2 = try PrivateKey(privateKey: privateKeyData)
         XCTAssertEqual(privateKey1, privateKey2, "PrivateKey equality failed")
@@ -73,7 +97,7 @@ class BoxTests: XCTestCase {
 
     func testBoxEncryptWithNonce() throws {
         let box = try Box(privateKey: privateKey, publicKey: privateKey.publicKey)
-        let nonce = Data(repeating: 0, count: Box.NONCE_SIZE)
+        let nonce = Data(repeating: 0, count: box.NONCE_SIZE)
         let encryptedMessage = try box.encrypt(plaintext: message, nonce: nonce)
         let decryptedMessage = try box.decrypt(
             ciphertext: encryptedMessage.getCiphertext, nonce: nonce)
@@ -83,7 +107,7 @@ class BoxTests: XCTestCase {
     func testBoxDecryptWithInvalidNonce() throws {
         let box = try Box(privateKey: privateKey, publicKey: privateKey.publicKey)
         let encryptedMessage = try box.encrypt(plaintext: message)
-        let invalidNonce = Data(repeating: 0, count: Box.NONCE_SIZE - 1)
+        let invalidNonce = Data(repeating: 0, count: box.NONCE_SIZE - 1)
         XCTAssertThrowsError(
             try box.decrypt(ciphertext: encryptedMessage.getCiphertext, nonce: invalidNonce),
             "Expected error for invalid nonce size")

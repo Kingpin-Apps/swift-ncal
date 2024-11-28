@@ -1,33 +1,61 @@
 import Clibsodium
 import Foundation
 
-nonisolated(unsafe) private let sodium = Sodium()
-
 public struct Scrypt {
-    public let strbytesPlusOne = sodium.cryptoPwHash.scryptsalsa208sha256Strbytes
+    public let strbytesPlusOne: Int
     
-    public let strPrefix: String = sodium.cryptoPwHash.scryptsalsa208sha256Strprefix
+    public let strPrefix: String
 
-    public let saltBytes = sodium.cryptoPwHash.scryptsalsa208sha256Saltbytes
+    public let saltBytes: Int
     
-    public let passwdMin = sodium.cryptoPwHash.scryptsalsa208sha256PasswdMin
-    public let passwdMax = sodium.cryptoPwHash.scryptsalsa208sha256PasswdMax
+    public let passwdMin: Int
+    public let passwdMax: Int
 
-    public let pwhashSize = sodium.cryptoPwHash.scryptsalsa208sha256Strbytes - 1
+    public let pwhashSize: Int
     
-    public let bytesMin = sodium.cryptoPwHash.scryptsalsa208sha256BytesMin
-    public let bytesMax = sodium.cryptoPwHash.scryptsalsa208sha256BytesMax
+    public let bytesMin: Int
+    public let bytesMax: Int
     
-    public let memLimitMin = sodium.cryptoPwHash.scryptsalsa208sha256MemlimitMin
-    public let memLimitMax = sodium.cryptoPwHash.scryptsalsa208sha256MemlimitMax
-    public let opsLimitMin = sodium.cryptoPwHash.scryptsalsa208sha256OpslimitMin
-    public let opsLimitMax = sodium.cryptoPwHash.scryptsalsa208sha256OpslimitMax
-    public let opsLimitInteractive = sodium.cryptoPwHash.scryptsalsa208sha256OpslimitInteractive
-    public let memLimitInteractive = sodium.cryptoPwHash.scryptsalsa208sha256MemlimitInteractive
-    public let opsLimitModerate = 8 * sodium.cryptoPwHash.scryptsalsa208sha256OpslimitInteractive
-    public let memLimitModerate = 8 * sodium.cryptoPwHash.scryptsalsa208sha256MemlimitInteractive
-    public let opsLimitSensitive = sodium.cryptoPwHash.scryptsalsa208sha256OpslimitSensitive
-    public let memLimitSensitive = sodium.cryptoPwHash.scryptsalsa208sha256MemlimitSensitive
+    public let memLimitMin: Int
+    public let memLimitMax: Int
+    public let opsLimitMin: Int
+    public let opsLimitMax: Int
+    public let opsLimitInteractive: Int
+    public let memLimitInteractive: Int
+    public let opsLimitModerate: Int
+    public let memLimitModerate: Int
+    public let opsLimitSensitive: Int
+    public let memLimitSensitive: Int
+    
+    private let sodium: Sodium
+    
+    public init() {
+        self.sodium = Sodium()
+        
+        self.strbytesPlusOne = sodium.cryptoPwHash.scryptsalsa208sha256Strbytes
+        self.strPrefix = sodium.cryptoPwHash.scryptsalsa208sha256Strprefix
+
+        self.saltBytes = sodium.cryptoPwHash.scryptsalsa208sha256Saltbytes
+        
+        self.passwdMin = sodium.cryptoPwHash.scryptsalsa208sha256PasswdMin
+        self.passwdMax = sodium.cryptoPwHash.scryptsalsa208sha256PasswdMax
+
+        self.pwhashSize = sodium.cryptoPwHash.scryptsalsa208sha256Strbytes - 1
+        
+        self.bytesMin = sodium.cryptoPwHash.scryptsalsa208sha256BytesMin
+        self.bytesMax = sodium.cryptoPwHash.scryptsalsa208sha256BytesMax
+        
+        self.memLimitMin = sodium.cryptoPwHash.scryptsalsa208sha256MemlimitMin
+        self.memLimitMax = sodium.cryptoPwHash.scryptsalsa208sha256MemlimitMax
+        self.opsLimitMin = sodium.cryptoPwHash.scryptsalsa208sha256OpslimitMin
+        self.opsLimitMax = sodium.cryptoPwHash.scryptsalsa208sha256OpslimitMax
+        self.opsLimitInteractive = sodium.cryptoPwHash.scryptsalsa208sha256OpslimitInteractive
+        self.memLimitInteractive = sodium.cryptoPwHash.scryptsalsa208sha256MemlimitInteractive
+        self.opsLimitModerate = 8 * sodium.cryptoPwHash.scryptsalsa208sha256OpslimitInteractive
+        self.memLimitModerate = 8 * sodium.cryptoPwHash.scryptsalsa208sha256MemlimitInteractive
+        self.opsLimitSensitive = sodium.cryptoPwHash.scryptsalsa208sha256OpslimitSensitive
+        self.memLimitSensitive = sodium.cryptoPwHash.scryptsalsa208sha256MemlimitSensitive
+    }
 
     /**
      Derive a `size` bytes long key from a caller-supplied
@@ -57,7 +85,7 @@ public struct Scrypt {
 
      .. versionadded:: 1.2
      */
-    func kdf(size: Int, password: Data, salt: Data, opsLimit: Int? = nil, memLimit: Int? = nil, encoder: (Data) -> Data = { $0 }) throws -> Data {
+    public func kdf(size: Int, password: Data, salt: Data, opsLimit: Int? = nil, memLimit: Int? = nil, encoder: (Data) -> Data = { $0 }) throws -> Data {
         let memLim = memLimit ?? memLimitSensitive
         let opsLim = opsLimit ?? opsLimitSensitive
         
@@ -105,7 +133,7 @@ public struct Scrypt {
 
      .. versionadded:: 1.2
      */
-    func str(password: Data, opsLimit: Int? = nil, memLimit: Int? = nil) throws -> String {
+    public func str(password: Data, opsLimit: Int? = nil, memLimit: Int? = nil) throws -> String {
         return try sodium.cryptoPwHash.scryptsalsa208sha256Str(
             passwd: password,
             opsLimit: opsLimit,
@@ -124,7 +152,7 @@ public struct Scrypt {
 
      .. versionadded:: 1.2
      */
-    func verify(passwordHash: Data, password: Data) throws -> Bool {
+    public func verify(passwordHash: Data, password: Data) throws -> Bool {
         try ensure(
             passwordHash.count == pwhashSize,
             raising: .valueError("The password hash must be exactly \(strbytesPlusOne) bytes long")

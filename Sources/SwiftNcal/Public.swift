@@ -1,16 +1,24 @@
 import Clibsodium
 import Foundation
 
-nonisolated(unsafe) private let sodium = Sodium()
+public struct KeyPair: Hashable {
+    public var publicKey: PublicKey
+    public var secretKey: PrivateKey
 
-struct KeyPair: Hashable {
-    var publicKey: PublicKey
-
-    var secretKey: PrivateKey
-
-    init(publicKey: PublicKey, secretKey: PrivateKey) {
+    public init(publicKey: PublicKey, secretKey: PrivateKey) {
         self.publicKey = publicKey
         self.secretKey = secretKey
+    }
+    
+    /*
+     Generates a random `PrivateKey` and its corresponding `PublicKey`
+
+        - Returns: A randomly generated `KeyPair`
+     */
+    public static func generate() -> KeyPair {
+        let randomBytes = Data(random(size:  Sodium().cryptoBox.seedBytes))
+        let privateKey = try! PrivateKey(privateKey: randomBytes)
+        return KeyPair(publicKey: privateKey.publicKey, secretKey: privateKey)
     }
 }
 
@@ -21,30 +29,33 @@ struct KeyPair: Hashable {
  - Parameter publicKey: Encoded Curve25519 public key
  - Parameter encoder: A class that is able to decode the `public_key`
  */
-class PublicKey: Hashable {
-    static let SIZE = sodium.cryptoBox.publicKeyBytes
+public class PublicKey: Hashable {
+    public let SIZE: Int
 
-    private var _publicKey: Data
+    private var publicKey: Data
+    private let sodium: Sodium
 
-    init(publicKey: Data, encoder: Encoder.Type = RawEncoder.self) throws {
-        self._publicKey = encoder.decode(data: publicKey)
+    public init(publicKey: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+        self.sodium = Sodium()
+        self.SIZE = sodium.cryptoBox.publicKeyBytes
+        self.publicKey = encoder.decode(data: publicKey)
 
         try ensure(
-            self._publicKey.count == PublicKey.SIZE,
-            raising: .valueError("The public key must be exactly \(PublicKey.SIZE) bytes long")
+            self.publicKey.count == SIZE,
+            raising: .valueError("The public key must be exactly \(SIZE) bytes long")
         )
     }
 
-    func toBytes() -> Data {
-        return _publicKey
+    public func toBytes() -> Data {
+        return self.publicKey
     }
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(_publicKey)
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.toBytes())
     }
 
-    static func == (lhs: PublicKey, rhs: PublicKey) -> Bool {
-        return sodium.utils.sodiumMemcmp(lhs._publicKey, rhs._publicKey)
+    public static func == (lhs: PublicKey, rhs: PublicKey) -> Bool {
+        return Sodium().utils.sodiumMemcmp(lhs.toBytes(), rhs.toBytes())
     }
 }
 
@@ -58,23 +69,27 @@ class PublicKey: Hashable {
  - Parameter privateKey: The private key used to decrypt messages
  - Parameter encoder: The encoder class used to decode the given keys
  */
-class PrivateKey: Hashable {
-    static let SIZE = sodium.cryptoBox.secretKeyBytes
-    static let SEED_SIZE = sodium.cryptoBox.seedBytes
+public class PrivateKey: Hashable {
+    public let SIZE: Int
+    public let SEED_SIZE: Int
+    public var publicKey: PublicKey
 
-    private var _privateKey: Data
-    var publicKey: PublicKey
+    private var privateKey: Data
+    private let sodium: Sodium
 
-    init(privateKey: Data, encoder: Encoder.Type = RawEncoder.self) throws {
-        self._privateKey = encoder.decode(data: privateKey)
+    public init(privateKey: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+        self.sodium = Sodium()
+        self.SIZE = sodium.cryptoBox.secretKeyBytes
+        self.SEED_SIZE = sodium.cryptoBox.seedBytes
+        self.privateKey = encoder.decode(data: privateKey)
 
         try ensure(
-            self._privateKey.count == PrivateKey.SIZE,
-            raising: .valueError("The private key must be exactly \(PrivateKey.SIZE) bytes long")
+            self.privateKey.count == SIZE,
+            raising: .valueError("The private key must be exactly \(SIZE) bytes long")
         )
 
         let rawPublicKey = try sodium.cryptoScalarmult.base(
-            n: self._privateKey
+            n: self.privateKey
         )
         self.publicKey = try PublicKey(publicKey: rawPublicKey)
     }
@@ -91,27 +106,30 @@ class PrivateKey: Hashable {
 
      - Parameter seed: The seed used to generate the private key
      */
-    static func fromSeed(seed: Data, encoder: Encoder.Type = RawEncoder.self) throws -> PrivateKey {
+    public static func fromSeed(seed: Data, encoder: Encoder.Type = RawEncoder.self) throws -> PrivateKey {
+        let sodium = Sodium()
         let decodedSeed = encoder.decode(data: seed)
 
         try ensure(
-            decodedSeed.count == PrivateKey.SEED_SIZE,
-            raising: .valueError("The seed must be exactly \(PrivateKey.SEED_SIZE) bytes long")
+            decodedSeed.count == sodium.cryptoBox.seedBytes,
+            raising: .valueError("The seed must be exactly \(sodium.cryptoBox.seedBytes) bytes long")
         )
 
         let (rawPrivateKey, _) = try sodium.cryptoBox.seedKeypair(seed: decodedSeed)
         return try PrivateKey(privateKey: rawPrivateKey)
     }
 
-    func toBytes() -> Data {
-        return _privateKey
+    public func toBytes() -> Data {
+        return privateKey
     }
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(KeyPair(publicKey: self.publicKey, secretKey: self))
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.toBytes())
+        hasher.combine(publicKey.toBytes())
     }
 
-    static func == (lhs: PrivateKey, rhs: PrivateKey) -> Bool {
+    public static func == (lhs: PrivateKey, rhs: PrivateKey) -> Bool {
+        let sodium = Sodium()
         return sodium.utils
             .sodiumMemcmp(lhs.publicKey.toBytes(), rhs.publicKey.toBytes())
     }
@@ -121,8 +139,9 @@ class PrivateKey: Hashable {
 
         - Returns: A randomly generated `PrivateKey`
      */
-    static func generate() -> PrivateKey {
-        let randomBytes = Data(random(size: PrivateKey.SIZE))
+    public static func generate() -> PrivateKey {
+        let sodium = Sodium()
+        let randomBytes = Data(random(size: sodium.cryptoBox.seedBytes))
         return try! PrivateKey(privateKey: randomBytes)
     }
 }
@@ -141,12 +160,16 @@ class PrivateKey: Hashable {
     - Parameter privateKey: The private key used to decrypt messages
     - Parameter publicKey: The public key used to encrypt messages
  */
-class Box {
-    static let NONCE_SIZE = sodium.cryptoBox.nonceBytes
+public class Box {
+    public let NONCE_SIZE: Int
 
     private var _sharedKey: Data
+    private let sodium: Sodium
 
-    init(privateKey: PrivateKey, publicKey: PublicKey) throws {
+    public init(privateKey: PrivateKey, publicKey: PublicKey) throws {
+        self.sodium = Sodium()
+        self.NONCE_SIZE = sodium.cryptoBox.nonceBytes
+        
         self._sharedKey = try sodium.cryptoBox.beforenm(
             publicKey: publicKey.toBytes(),
             secretKey: privateKey.toBytes()
@@ -154,12 +177,15 @@ class Box {
     }
 
     /// Alternative constructor. Creates a Box from an existing Box's shared key.
-    init(encoded: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+    public init(encoded: Data, encoder: Encoder.Type = RawEncoder.self) throws {
+        self.sodium = Sodium()
+        self.NONCE_SIZE = sodium.cryptoBox.nonceBytes
         self._sharedKey = encoder.decode(data: encoded)
     }
 
-    static func generate() -> PrivateKey {
-        let randomBytes = Data(random(size: PrivateKey.SIZE))
+    public static func generate() -> PrivateKey {
+        let sodium = Sodium()
+        let randomBytes = Data(random(size: sodium.cryptoBox.secretKeyBytes))
         return try! PrivateKey(privateKey: randomBytes)
     }
 
@@ -179,11 +205,11 @@ class Box {
     public func encrypt(
         plaintext: Data, nonce: Data? = nil, encoder: Encoder.Type = RawEncoder.self
     ) throws -> EncryptedMessage {
-        let nonce = nonce ?? Data(random(size: Box.NONCE_SIZE))
+        let nonce = nonce ?? Data(random(size: self.NONCE_SIZE))
 
         try ensure(
-            nonce.count == Box.NONCE_SIZE,
-            raising: .valueError("The nonce must be exactly \(Box.NONCE_SIZE) bytes long")
+            nonce.count == self.NONCE_SIZE,
+            raising: .valueError("The nonce must be exactly \(self.NONCE_SIZE) bytes long")
         )
 
         let ciphertext = try sodium.cryptoBox.easyAfternm(
@@ -219,13 +245,13 @@ class Box {
         var nonceData = nonce
 
         if nonceData == nil {
-            nonceData = ciphertext.prefix(Box.NONCE_SIZE)
-            ciphertext = ciphertext.suffix(from: Box.NONCE_SIZE)
+            nonceData = ciphertext.prefix(self.NONCE_SIZE)
+            ciphertext = ciphertext.suffix(from: self.NONCE_SIZE)
         }
 
         try ensure(
-            nonceData!.count == Box.NONCE_SIZE,
-            raising: .valueError("The nonce must be exactly \(Box.NONCE_SIZE) bytes long")
+            nonceData!.count == self.NONCE_SIZE,
+            raising: .valueError("The nonce must be exactly \(self.NONCE_SIZE) bytes long")
         )
 
         let plaintext = try sodium.cryptoBox.openEasyAfternm(
@@ -260,21 +286,24 @@ class Box {
 
     - Parameter recipientKey: A `PublicKey` used to encrypt messages and derive nonces, or a :class:`~nacl.public.PrivateKey` used to decrypt messages.
  */
-class SealedBox {
+public class SealedBox {
     private var publicKey: Data
     private var privateKey: Data?
+    private let sodium: Sodium
 
-    init(recipientKey: PublicKey) {
+    public init(recipientKey: PublicKey) {
+        self.sodium = Sodium()
         self.publicKey = recipientKey.toBytes()
         self.privateKey = nil
     }
 
-    init(recipientKey: PrivateKey) {
+    public init(recipientKey: PrivateKey) {
+        self.sodium = Sodium()
         self.publicKey = recipientKey.publicKey.toBytes()
         self.privateKey = recipientKey.toBytes()
     }
 
-    func toBytes() -> Data {
+    public func toBytes() -> Data {
         return publicKey
     }
 
@@ -291,7 +320,7 @@ class SealedBox {
         - Parameter plaintext: The message to encrypt
         - Parameter encoder: The encoder class used to encode the ciphertext
      */
-    func encrypt(plaintext: Data, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
+    public func encrypt(plaintext: Data, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
         let ciphertext = try sodium.cryptoBox.seal(
             message: plaintext,
             publicKey: self.publicKey
@@ -307,7 +336,7 @@ class SealedBox {
         - Parameter ciphertext: The message to decrypt
         - Parameter encoder: The encoder class used to decode the ciphertext
      */
-    func decrypt(ciphertext: Data, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
+    public func decrypt(ciphertext: Data, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
         try ensure(
             privateKey != nil,
             raising: .valueError("SealedBoxes created with a public key cannot decrypt")

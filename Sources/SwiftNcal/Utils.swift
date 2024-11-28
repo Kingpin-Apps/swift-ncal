@@ -1,12 +1,10 @@
 import Clibsodium
 import Foundation
 
-nonisolated(unsafe) private let sodium = Sodium()
-
 /**
  A Data subclass that holds a message that has been encrypted by a `SecretBox`.
  */
-class EncryptedMessage {
+public class EncryptedMessage {
     private var nonce: Data
     private var ciphertext: Data
     private var combined: Data
@@ -43,17 +41,17 @@ class EncryptedMessage {
     }
 }
 
-class StringFixer {
+public class StringFixer {
     func toString(data: Data) -> String {
         return String(data: data, encoding: .utf8) ?? ""
     }
 }
 
-func bytesAsString(bytesIn: Data) -> String {
+public func bytesAsString(bytesIn: Data) -> String {
     return bytesIn.map { String(format: "%02hhx", $0) }.joined()
 }
 
-func random(size: Int = 32) -> Data {
+public func random(size: Int = 32) -> Data {
     return Data((0..<size).map { _ in UInt8.random(in: 0...255) })
 }
 
@@ -65,8 +63,8 @@ func random(size: Int = 32) -> Data {
  - parameter encoder: The encoder class used to encode the produced bytes
  - returns: Data
  */
-func randomBytesDeterministic(size: Int, seed: Data, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
-    let rawData = try sodium.randomBytes.bufDeterministic(
+public func randomBytesDeterministic(size: Int, seed: Data, encoder: Encoder.Type = RawEncoder.self) throws -> Data {
+    let rawData = try Sodium().randomBytes.bufDeterministic(
         size: size,
         seed: seed
     )
