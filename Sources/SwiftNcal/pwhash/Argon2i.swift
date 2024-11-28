@@ -96,6 +96,7 @@ public struct Argon2i {
      - parameter salt: **RANDOM** salt used in the key derivation procedure; its length must be exactly `saltBytes`
      - parameter opsLimit: the time component (operation count) of the key derivation procedure's computational cost; it must be between `opsLimitMin` and `opsLimitMax`
      - parameter memLimit: the memory occupation component of the key derivation procedure's computational cost; it must be between `memLimitMin` and `memLimitMax`
+     - parameter encoder: a function that will be applied to the derived key before returning it
      - returns: bytes
 
      .. versionadded:: 1.2

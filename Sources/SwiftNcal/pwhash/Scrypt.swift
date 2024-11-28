@@ -80,6 +80,7 @@ public struct Scrypt {
      - parameter salt: **RANDOM** salt used in the key derivation procedure; its length must be exactly `saltBytes`
      - parameter opsLimit: the time component (operation count) of the key derivation procedure's computational cost; it must be between `opsLimitMin` and `opsLimitMax`
      - parameter memLimit: the memory occupation component of the key derivation procedure's computational cost; it must be between `memLimitMin` and `memLimitMax`
+     - parameter encoder: a closure that will be used to encode the output key; the default is the identity
      - returns: bytes
      - throws: UnavailableError if called when using a minimal build of libsodium
 

@@ -213,8 +213,8 @@ public struct CryptoPwHash {
 
      - Parameters:
        - passwd: The input password.
-       - opslimit: The computational cost. Default is `scryptOpslimitInteractive`.
-       - memlimit: The memory cost. Default is `scryptMemlimitInteractive`.
+       - opsLimit: The computational cost. Default is `scryptOpslimitInteractive`.
+       - memLimit: The memory cost. Default is `scryptMemlimitInteractive`.
      - Returns: Serialized key hash, including salt and tuning parameters.
      - Throws: `CryptoError` if any of the conditions are not met or if password hashing fails.
      */
