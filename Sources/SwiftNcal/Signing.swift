@@ -149,7 +149,7 @@ public class SigningKey: Equatable, Hashable {
     /// - Parameters:
     ///   - message: The message to sign.
     ///   - encoder: The encoder to use for encoding and decoding data.
-    func sign(message: Data, encoder: Encoder.Type = RawEncoder.self) throws -> SignedMessage {
+    public func sign(message: Data, encoder: Encoder.Type = RawEncoder.self) throws -> SignedMessage {
         
         let rawSigned = try sodium.cryptoSign.sign(
             message: message,
@@ -163,7 +163,7 @@ public class SigningKey: Equatable, Hashable {
     }
 
     /// Converts a `SigningKey` to a `PrivateKey`
-    func toCurve25519PrivateKey() throws -> PrivateKey {
+    public func toCurve25519PrivateKey() throws -> PrivateKey {
         let rawPrivate = try sodium.cryptoSign.ed25519SkToCurve25519(
             secretKeyBytes: self.signingKey
         )
