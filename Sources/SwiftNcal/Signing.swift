@@ -19,17 +19,17 @@ public class SignedMessage {
     }
 
     /// The signature contained within the `SignedMessage`.
-    var getSignature: Data {
+    public var getSignature: Data {
         return self.signature
     }
 
     /// The message contained within the `SignedMessage`.
-    var getMessage: Data {
+    public var getMessage: Data {
         return self.message
     }
     
     /// The combined contained within the `SignedMessage`.
-    var getCombined: Data {
+    public var getCombined: Data {
         return combined
     }
 }
