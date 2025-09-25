@@ -2,22 +2,61 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
+import Foundation
+
+// Environment variable to control libsodium usage
+let useSystemLibsodium = ProcessInfo.processInfo.environment["SWIFT_NCAL_USE_SYSTEM_LIBSODIUM"] == "1"
 
 let clibsodiumTarget: Target
-#if os(OSX) || os(macOS) || os(tvOS) || os(watchOS) || os(iOS)
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+    // Use precompiled binary framework for Apple platforms
     clibsodiumTarget = .binaryTarget(
         name: "Clibsodium",
         path: "Clibsodium.xcframework")
+#elseif os(Linux)
+    if useSystemLibsodium {
+        // Use system libsodium when explicitly requested
+        clibsodiumTarget = .systemLibrary(
+            name: "Clibsodium",
+            path: "Clibsodium",
+            pkgConfig: "libsodium",
+            providers: [
+                .apt(["libsodium-dev"]),
+                .yum(["libsodium-devel"]),
+                .brew(["libsodium"]),
+            ])
+    } else {
+        // Use bundled Linux binaries from LinuxBinaries folder (architecture-specific)
+        #if arch(x86_64)
+            clibsodiumTarget = .systemLibrary(
+                name: "Clibsodium",
+                path: "LinuxBinaries/x86_64-unknown-linux-gnu")
+        #elseif arch(arm64)
+            clibsodiumTarget = .systemLibrary(
+                name: "Clibsodium",
+                path: "LinuxBinaries/aarch64-unknown-linux-gnu")
+        #else
+            // Fallback to system library for unsupported architectures
+            clibsodiumTarget = .systemLibrary(
+                name: "Clibsodium",
+                path: "Clibsodium",
+                pkgConfig: "libsodium",
+                providers: [
+                    .apt(["libsodium-dev"]),
+                    .yum(["libsodium-devel"]),
+                ])
+        #endif
+    }
 #else
+    // Fallback to system library for other platforms
     clibsodiumTarget = .systemLibrary(
         name: "Clibsodium",
         path: "Clibsodium",
         pkgConfig: "libsodium",
         providers: [
             .apt(["libsodium-dev"]),
+            .yum(["libsodium-devel"]),
             .brew(["libsodium"]),
-            // Waiting for bug to be fixed: https://bugs.swift.org/browse/SR-14038
-            // .yum(["libsodium-devel"])
         ])
 #endif
 
