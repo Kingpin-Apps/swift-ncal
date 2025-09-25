@@ -1,3 +1,13 @@
+## 0.2.0 (2025-09-24)
+
+### Feat
+
+- add VRFs
+
+### Fix
+
+- add binaries for Linux and add docs
+
 ## 0.1.4 (2025-02-07)
 
 ### Fix
